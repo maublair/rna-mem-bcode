@@ -2,48 +2,53 @@
 
 Este es el stack base del sistema RNA, diseñado para ser el sistema nervioso digital centralizado que maneja la memoria personal, empresarial y operacional.
 
-## Servicios Incluidos
-El stack de Docker Compose (`/srv/stacks/rna/docker-compose.yml`) incluye:
-- **neo4j:** Base de datos de grafos para entidades y relaciones. (Puertos: 7887 Bolt, 7576 HTTP)
-- **qdrant:** Base de datos vectorial para búsqueda semántica. (Puerto: 6555)
-- **postgres:** Base de datos relacional para transacciones y eventos. (Puerto: 5543)
-- **redis:** Caché en memoria. (Puerto: 6599)
-- **minio:** Almacenamiento de objetos compatible con S3. (Puertos: 9100, 9101)
-- **api:** Backend principal en Node.js/Express. (Puerto: 3007)
+## Servicios incluidos
+- `neo4j`: grafo de conocimiento. (`127.0.0.1:7887`, `127.0.0.1:7576`)
+- `qdrant`: memoria vectorial. (`127.0.0.1:6555`)
+- `postgres`: transaccional. (`127.0.0.1:5543`)
+- `redis`: caché. (`127.0.0.1:6599`)
+- `minio`: objetos S3. (`127.0.0.1:9100`, `127.0.0.1:9101`)
+- `api`: backend RNA. (`127.0.0.1:3007`)
 
-## Cómo levantar el entorno
+## Seguridad obligatoria
+1. Copiar plantilla segura:
+```bash
+cp .env.example .env
+```
+2. Editar `.env` y definir secretos reales:
+- `OPENAI_API_KEY`
+- `RNA_POSTGRES_PASSWORD`
+- `RNA_MINIO_ROOT_PASSWORD`
+- `RNA_NEO4J_PASSWORD` (si no usas `RNA_NEO4J_AUTH=none`)
 
-1. Navega al directorio del stack:
-   ```bash
-   cd /home/mblair/srv/stacks/rna/
-   ```
+Nunca dejes secretos en `docker-compose.yml`.
 
-2. Ejecuta Docker Compose:
-   ```bash
-   docker compose up -d
-   ```
-   *(La API compilará los cambios en TypeScript de ser necesario mediante el comando `npm run build` en su Dockerfile).*
+## Levantar el entorno
+```bash
+cd /home/mblair/srv/stacks/rna
+docker compose up -d --build
+curl http://127.0.0.1:3007/health
+```
 
-3. Verifica la salud:
-   ```bash
-   curl http://localhost:3007/health
-   ```
-   Deberías recibir:
-   ```json
-   {
-     "status": "healthy",
-     "timestamp": "...",
-     "services": {
-       "postgres": "up",
-       "neo4j": "up",
-       "qdrant": "up"
-     }
-   }
-   ```
+## `rna-mem-link` para todos los agentes
+El cliente está en `skill-client` (`@rna/mem-link`) y usa prioridad de configuración:
+1. variables de entorno (`RNA_API_KEY`, `RNA_SERVER_URL`)
+2. `~/.rna/config.json`
+3. fallback local (`~/.rna`)
+
+Config base recomendada en cada dispositivo:
+```json
+{
+  "device_id": "mauricio-main-server",
+  "api_key": "<RNA_API_KEY>",
+  "rna_server": "https://rna.bcode.work",
+  "sync_interval_ms": 300000,
+  "offline_mode": false
+}
+```
 
 ## Componentes
-
-- `/backend`: Código fuente de la API (Node.js, Express, TypeScript).
-- `/migrations`: Scripts SQL de inicialización para PostgreSQL.
-- `/scripts`: Scripts Cypher para poblar Neo4j.
-- `/skill-client`: Módulo npm `@rna/mem-link` que sirve como cliente para agentes de IA.
+- `backend/`: API Node/Express/TypeScript.
+- `migrations/`: SQL de bootstrap.
+- `scripts/`: carga base de Neo4j.
+- `skill-client/`: paquete `@rna/mem-link` para agentes.

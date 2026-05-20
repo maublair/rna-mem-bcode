@@ -5,10 +5,10 @@ services:
     image: neo4j:5-community
     container_name: rna-neo4j
     ports:
-      - "127.0.0.1:7887:7687" # Bolt (SIA uses 7689)
-      - "127.0.0.1:7576:7474" # HTTP (SIA uses 7476)
+      - "127.0.0.1:7887:7687"
+      - "127.0.0.1:7576:7474"
     environment:
-      NEO4J_AUTH: none
+      NEO4J_AUTH: ${RNA_NEO4J_AUTH:-none}
       NEO4J_ACCEPT_LICENSE_AGREEMENT: 'yes'
     volumes:
       - neo4j_data:/data
@@ -24,11 +24,11 @@ services:
     image: qdrant/qdrant:latest
     container_name: rna-qdrant
     ports:
-      - "127.0.0.1:6555:6333" # (SIA uses 6336, Silhouette uses 6444)
+      - "127.0.0.1:6555:6333"
     volumes:
       - qdrant_data:/qdrant/storage
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      test: ["CMD-SHELL", "grep -i :18BD /proc/net/tcp || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -39,15 +39,15 @@ services:
     image: postgres:15-alpine
     container_name: rna-postgres
     ports:
-      - "127.0.0.1:5543:5432" # (Default 5432 might be in use)
+      - "127.0.0.1:5543:5432"
     environment:
-      POSTGRES_USER: rna_admin
-      POSTGRES_PASSWORD: rna_password_2026
-      POSTGRES_DB: rna_db
+      POSTGRES_USER: ${RNA_POSTGRES_USER:-rna_admin}
+      POSTGRES_PASSWORD: ${RNA_POSTGRES_PASSWORD:-change_me}
+      POSTGRES_DB: ${RNA_POSTGRES_DB:-rna_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U rna_admin -d rna_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${RNA_POSTGRES_USER:-rna_admin} -d ${RNA_POSTGRES_DB:-rna_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -58,7 +58,7 @@ services:
     image: redis:7-alpine
     container_name: rna-redis
     ports:
-      - "127.0.0.1:6599:6379" # (SIA uses 6389, Silhouette uses 6499)
+      - "127.0.0.1:6599:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -73,11 +73,11 @@ services:
     image: minio/minio:latest
     container_name: rna-minio
     ports:
-      - "127.0.0.1:9100:9000" # API
-      - "127.0.0.1:9101:9001" # Console
+      - "127.0.0.1:9100:9000"
+      - "127.0.0.1:9101:9001"
     environment:
-      MINIO_ROOT_USER: rna_admin
-      MINIO_ROOT_PASSWORD: rna_password_2026
+      MINIO_ROOT_USER: ${RNA_MINIO_ROOT_USER:-rna_admin}
+      MINIO_ROOT_PASSWORD: ${RNA_MINIO_ROOT_PASSWORD:-change_me}
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
@@ -96,26 +96,25 @@ services:
     container_name: rna-api
     restart: always
     ports:
-      - "127.0.0.1:3007:3005" # Host 3005 is busy, using 3007 for now
+      - "127.0.0.1:3007:3005"
+    env_file:
+      - .env
     environment:
-      NODE_ENV: production
-      PORT: 3005
-      DATABASE_URL: postgresql://rna_admin:rna_password_2026@postgres:5432/rna_db
-      REDIS_URL: redis://redis:6379
-      NEO4J_URI: bolt://neo4j:7687
-      NEO4J_USER: neo4j
-      NEO4J_PASSWORD: password
-      QDRANT_URL: http://qdrant:6333
-      MINIO_ENDPOINT: minio
-      MINIO_PORT: 9000
-      MINIO_ACCESS_KEY: rna_admin
-      MINIO_SECRET_KEY: rna_password_2026
-    # Ports will be handled by NPM/Gateway later, for now we can expose it to host if needed
-    # But handoff says: "No uses Puerto 3005 externo — RNA es localhost:3005 hasta que Codex configure Cloudflare"
-    # Actually, NPM will need to reach it. If they share a network, it's easier.
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${RNA_API_PORT:-3005}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DATABASE_URL: ${RNA_DATABASE_URL:-postgresql://rna_admin:change_me@postgres:5432/rna_db}
+      REDIS_URL: ${RNA_REDIS_URL:-redis://redis:6379}
+      NEO4J_URI: ${RNA_NEO4J_URI:-bolt://neo4j:7687}
+      NEO4J_USER: ${RNA_NEO4J_USER:-neo4j}
+      NEO4J_PASSWORD: ${RNA_NEO4J_PASSWORD:-}
+      QDRANT_URL: ${RNA_QDRANT_URL:-http://qdrant:6333}
+      MINIO_ENDPOINT: ${RNA_MINIO_ENDPOINT:-minio}
+      MINIO_PORT: ${RNA_MINIO_PORT:-9000}
+      MINIO_ACCESS_KEY: ${RNA_MINIO_ACCESS_KEY:-rna_admin}
+      MINIO_SECRET_KEY: ${RNA_MINIO_SECRET_KEY:-change_me}
     networks:
       - rna-net
-      # - gateway_public # We need to know the gateway network name
 
 networks:
   rna-net:

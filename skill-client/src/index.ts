@@ -1,6 +1,16 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+
 export interface RNALinkConfig {
   apiKey?: string;
   serverUrl?: string;
+  localPath?: string;
+}
+
+interface RNALocalConfig {
+  api_key?: string;
+  rna_server?: string;
 }
 
 export interface BootstrapRequest {
@@ -21,6 +31,7 @@ export interface QueryRequest {
 
 export interface Fact {
   id: string;
+  space_id?: string;
   content: string;
   type: string;
   tags?: string[];
@@ -46,56 +57,125 @@ export interface SuccessData {
   result: string;
 }
 
+function readLocalConfig(localPath: string): RNALocalConfig {
+  try {
+    const configPath = path.join(localPath, 'config.json');
+    if (!fs.existsSync(configPath)) return {};
+    return JSON.parse(fs.readFileSync(configPath, 'utf-8')) as RNALocalConfig;
+  } catch {
+    return {};
+  }
+}
+
 export class RNALink {
   private apiKey: string;
   private serverUrl: string;
+  private localPath: string;
 
   constructor(config: RNALinkConfig = {}) {
-    this.apiKey = config.apiKey || process.env.RNA_API_KEY || '';
-    this.serverUrl = config.serverUrl || process.env.RNA_SERVER_URL || 'https://rna.bcode.work';
+    this.localPath = config.localPath || path.join(os.homedir(), '.rna');
+
+    if (!fs.existsSync(this.localPath)) {
+      fs.mkdirSync(this.localPath, { recursive: true });
+    }
+
+    const localConfig = readLocalConfig(this.localPath);
+    this.apiKey = config.apiKey || process.env.RNA_API_KEY || localConfig.api_key || '';
+    this.serverUrl =
+      config.serverUrl || process.env.RNA_SERVER_URL || localConfig.rna_server || 'https://rna.bcode.work';
   }
 
   private async request(endpoint: string, options: RequestInit = {}) {
     const url = `${this.serverUrl}${endpoint}`;
     const headers = {
       'Content-Type': 'application/json',
-      'x-api-key': this.apiKey,
+      ...(this.apiKey ? { 'x-api-key': this.apiKey } : {}),
       ...options.headers,
     };
 
-    const response = await fetch(url, { ...options, headers });
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`RNA API Error ${response.status}: ${errorText}`);
+    try {
+      const response = await fetch(url, { ...options, headers });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.warn(`RNA API Warning ${response.status}: ${errorText}`);
+        return null;
+      }
+      return response.json();
+    } catch {
+      console.warn('RNA API connection failed, working in local mode.');
+      return null;
     }
-    return response.json();
   }
 
-  async bootstrap(req: BootstrapRequest): Promise<BootstrapResponse> {
-    return this.request('/v1/agents/bootstrap', {
-      method: 'POST',
-      body: JSON.stringify(req),
-    });
-  }
+  private saveLocal(space: string, content: any, type: string) {
+    try {
+      const relativePath = space.replace('rna:/', '').replace(/:/g, '/');
+      const targetDir = path.join(this.localPath, relativePath);
 
-  async query(req: QueryRequest): Promise<Fact[]> {
-    const params = new URLSearchParams();
-    params.append('space', req.space);
-    if (req.filters) params.append('filters', JSON.stringify(req.filters));
-    
-    return this.request(`/v1/facts?${params.toString()}`, {
-      method: 'GET',
-    });
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+
+      const id = content.id || `local_${Date.now()}`;
+      const fileName = `${type.toLowerCase()}_${id}.json`;
+      const filePath = path.join(targetDir, fileName);
+
+      fs.writeFileSync(filePath, JSON.stringify(content, null, 2));
+      return true;
+    } catch (error) {
+      console.error('Failed to save to local RNA storage:', error);
+      return false;
+    }
   }
 
   async store(req: StoreRequest): Promise<{ id: string }> {
-    return this.request('/v1/facts', {
+    const timestamp = new Date().toISOString();
+    const factData = { ...req, created_at: timestamp };
+
+    this.saveLocal(req.space, factData, req.type);
+
+    const apiResult = await this.request('/v1/facts', {
       method: 'POST',
       body: JSON.stringify(req),
     });
+
+    return apiResult || { id: `local_${Date.now()}` };
+  }
+
+  async bootstrap(req: BootstrapRequest): Promise<BootstrapResponse> {
+    const apiResult = await this.request('/v1/agents/bootstrap', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+
+    if (apiResult) return apiResult;
+    return { injection: 'RNA Local Mode: usando cache local ~/.rna/' };
+  }
+
+  async query(req: QueryRequest): Promise<Fact[]> {
+    const apiResult = await this.request(`/v1/facts?space_id=${req.space.replace('rna:/', '')}`, {
+      method: 'GET',
+    });
+
+    if (apiResult) return apiResult;
+
+    try {
+      const relativePath = req.space.replace('rna:/', '').replace(/:/g, '/');
+      const targetDir = path.join(this.localPath, relativePath);
+      if (fs.existsSync(targetDir)) {
+        const files = fs.readdirSync(targetDir);
+        return files
+          .filter((f) => f.endsWith('.json'))
+          .map((f) => JSON.parse(fs.readFileSync(path.join(targetDir, f), 'utf-8')));
+      }
+    } catch {
+      return [];
+    }
+    return [];
   }
 
   async learnFromError(req: ErrorData): Promise<void> {
+    this.saveLocal('rna:/operacional/aprendizaje/errores', req, 'ERROR');
     await this.request('/v1/agents/learn/error', {
       method: 'POST',
       body: JSON.stringify(req),
@@ -103,6 +183,7 @@ export class RNALink {
   }
 
   async learnFromSuccess(req: SuccessData): Promise<void> {
+    this.saveLocal('rna:/operacional/aprendizaje/exitos', req, 'SUCCESS');
     await this.request('/v1/agents/learn/success', {
       method: 'POST',
       body: JSON.stringify(req),
@@ -110,10 +191,11 @@ export class RNALink {
   }
 
   async suggestFix(errorMsg: string): Promise<string[]> {
-    return this.request('/v1/agents/suggest', {
+    const apiResult = await this.request('/v1/agents/suggest', {
       method: 'POST',
       body: JSON.stringify({ error: errorMsg }),
     });
+    return apiResult || [];
   }
 }
 

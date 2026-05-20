@@ -9,6 +9,7 @@ import factsRoutes from './routes/facts.js';
 import transactionsRoutes from './routes/transactions.js';
 import devicesRoutes from './routes/devices.js';
 import initQdrant from './utils/initQdrant.js';
+import { redisClient } from './services/embeddingService.js';
 
 const app = express();
 const port = Number(process.env.PORT) || 3005;
@@ -18,8 +19,19 @@ app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
 
-// Initialize Qdrant collections
-initQdrant().catch(console.error);
+// Initialize services
+async function bootstrap() {
+  try {
+    await redisClient.connect();
+    console.log('Redis connected');
+    await initQdrant();
+    console.log('Qdrant initialized');
+  } catch (err) {
+    console.error('Bootstrap failed', err);
+  }
+}
+
+bootstrap();
 
 app.use('/health', healthRoutes);
 app.use('/auth', authRoutes);

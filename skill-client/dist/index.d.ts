@@ -1,6 +1,7 @@
 export interface RNALinkConfig {
     apiKey?: string;
     serverUrl?: string;
+    localPath?: string;
 }
 export interface BootstrapRequest {
     agent_id: string;
@@ -17,6 +18,7 @@ export interface QueryRequest {
 }
 export interface Fact {
     id: string;
+    space_id?: string;
     content: string;
     type: string;
     tags?: string[];
@@ -41,13 +43,15 @@ export interface SuccessData {
 export declare class RNALink {
     private apiKey;
     private serverUrl;
+    private localPath;
     constructor(config?: RNALinkConfig);
     private request;
-    bootstrap(req: BootstrapRequest): Promise<BootstrapResponse>;
-    query(req: QueryRequest): Promise<Fact[]>;
+    private saveLocal;
     store(req: StoreRequest): Promise<{
         id: string;
     }>;
+    bootstrap(req: BootstrapRequest): Promise<BootstrapResponse>;
+    query(req: QueryRequest): Promise<Fact[]>;
     learnFromError(req: ErrorData): Promise<void>;
     learnFromSuccess(req: SuccessData): Promise<void>;
     suggestFix(errorMsg: string): Promise<string[]>;
