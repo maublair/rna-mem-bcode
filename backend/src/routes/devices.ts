@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import postgres from '../services/postgresService.js';
+import { deviceAuth } from '../middleware/deviceAuth.js';
 
 const router = Router();
+router.use(deviceAuth);
 
 router.post('/update', async (req, res) => {
   const { device_id, type, metrics, timestamp } = req.body;
-  
   try {
     await postgres.query(
       `INSERT INTO rna_devices (id, type, metrics, last_seen) 

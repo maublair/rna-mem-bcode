@@ -19,20 +19,6 @@ app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
 
-// Initialize services
-async function bootstrap() {
-  try {
-    await redisClient.connect();
-    console.log('Redis connected');
-    await initQdrant();
-    console.log('Qdrant initialized');
-  } catch (err) {
-    console.error('Bootstrap failed', err);
-  }
-}
-
-bootstrap();
-
 app.use('/health', healthRoutes);
 app.use('/auth', authRoutes);
 app.use('/v1/spaces', spacesRoutes);
@@ -40,14 +26,20 @@ app.use('/v1/facts', factsRoutes);
 app.use('/v1/transactions', transactionsRoutes);
 app.use('/v1/devices', devicesRoutes);
 
-app.get('/', (req: Request, res: Response) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    service: 'rna-api'
-  });
+app.get('/', (_req: Request, res: Response) => {
+  res.json({ status: 'healthy', timestamp: new Date().toISOString(), service: 'rna-api' });
 });
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`RNA API listening at http://0.0.0.0:${port}`);
 });
+
+async function bootstrap() {
+  const tasks = [
+    redisClient.connect().then(() => console.log('Redis connected')).catch(err => console.error('Redis bootstrap failed', err)),
+    initQdrant().then(() => console.log('Qdrant initialized')).catch(err => console.error('Qdrant bootstrap failed', err)),
+  ];
+  await Promise.allSettled(tasks);
+}
+
+void bootstrap();

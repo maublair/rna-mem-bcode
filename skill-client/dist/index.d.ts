@@ -2,6 +2,9 @@ export interface RNALinkConfig {
     apiKey?: string;
     serverUrl?: string;
     localPath?: string;
+    pairingSecret?: string;
+    deviceId?: string;
+    deviceName?: string;
 }
 export interface BootstrapRequest {
     agent_id: string;
@@ -44,7 +47,14 @@ export declare class RNALink {
     private apiKey;
     private serverUrl;
     private localPath;
+    private pairingSecret;
+    private deviceId;
+    private deviceName;
+    private authToken;
+    private pairPromise;
     constructor(config?: RNALinkConfig);
+    private saveConfig;
+    private pairIfNeeded;
     private request;
     private saveLocal;
     store(req: StoreRequest): Promise<{

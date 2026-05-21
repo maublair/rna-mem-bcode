@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import crypto from 'crypto';
 function readLocalConfig(localPath) {
     try {
         const configPath = path.join(localPath, 'config.json');
@@ -16,6 +17,11 @@ export class RNALink {
     apiKey;
     serverUrl;
     localPath;
+    pairingSecret;
+    deviceId;
+    deviceName;
+    authToken;
+    pairPromise = null;
     constructor(config = {}) {
         this.localPath = config.localPath || path.join(os.homedir(), '.rna');
         if (!fs.existsSync(this.localPath)) {
@@ -23,13 +29,64 @@ export class RNALink {
         }
         const localConfig = readLocalConfig(this.localPath);
         this.apiKey = config.apiKey || process.env.RNA_API_KEY || localConfig.api_key || '';
-        this.serverUrl =
-            config.serverUrl || process.env.RNA_SERVER_URL || localConfig.rna_server || 'https://rna.bcode.work';
+        this.serverUrl = config.serverUrl || process.env.RNA_SERVER_URL || localConfig.rna_server || 'https://rna.bcode.work';
+        this.pairingSecret = config.pairingSecret || process.env.RNA_PAIRING_SECRET || localConfig.pairing_secret || '';
+        this.deviceId = config.deviceId || localConfig.device_id || crypto.randomUUID();
+        this.deviceName = config.deviceName || localConfig.device_name || os.hostname();
+        this.authToken = localConfig.auth_token || '';
+    }
+    saveConfig(patch) {
+        try {
+            const configPath = path.join(this.localPath, 'config.json');
+            const current = readLocalConfig(this.localPath);
+            fs.writeFileSync(configPath, JSON.stringify({ ...current, ...patch }, null, 2));
+        }
+        catch (error) {
+            console.error('Failed to persist RNA local config:', error);
+        }
+    }
+    async pairIfNeeded() {
+        if (this.authToken || !this.pairingSecret)
+            return;
+        if (!this.pairPromise) {
+            this.pairPromise = (async () => {
+                const response = await fetch(`${this.serverUrl}/auth/pair`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        device_id: this.deviceId,
+                        device_name: this.deviceName,
+                        fingerprint: this.deviceId,
+                        pairing_secret: this.pairingSecret,
+                    }),
+                });
+                if (!response.ok) {
+                    throw new Error(`RNA pairing failed: ${response.status}`);
+                }
+                const data = await response.json();
+                this.authToken = data.token || '';
+                if (this.authToken) {
+                    this.saveConfig({
+                        auth_token: this.authToken,
+                        device_id: this.deviceId,
+                        device_name: this.deviceName,
+                        pairing_secret: this.pairingSecret,
+                        rna_server: this.serverUrl,
+                        api_key: this.apiKey,
+                    });
+                }
+            })().finally(() => {
+                this.pairPromise = null;
+            });
+        }
+        await this.pairPromise;
     }
     async request(endpoint, options = {}) {
         const url = `${this.serverUrl}${endpoint}`;
+        await this.pairIfNeeded();
         const headers = {
             'Content-Type': 'application/json',
+            ...(this.authToken ? { Authorization: `Bearer ${this.authToken}` } : {}),
             ...(this.apiKey ? { 'x-api-key': this.apiKey } : {}),
             ...options.headers,
         };
