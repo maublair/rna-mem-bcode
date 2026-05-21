@@ -52,6 +52,14 @@ Todos los endpoints (excepto `/health`) esperan el header de autenticación:
 - **Desc:** Busca aprendizajes relacionados con un error para no resolverlo desde cero.
 - **Body:** `{ "error": "..." }`
 
+### `POST /v1/agents/trace`
+- **Desc:** Agrega una entrada inmutable a la bitácora del agente.
+- **Body:** `{ "agent_id": "codex", "command": "...", "status": "SUCCESS", "result_summary": "...", "duration_ms": 123 }`
+
+### `GET /v1/agents/trace`
+- **Desc:** Consulta entradas de bitácora.
+- **Query:** `agent_id`, `limit`.
+
 ## Transacciones Financieras
 ### `GET /v1/transactions`
 - **Desc:** Recupera transacciones limitadas a las últimas 50.

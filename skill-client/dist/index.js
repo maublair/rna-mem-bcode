@@ -183,5 +183,14 @@ export class RNALink {
         });
         return apiResult || [];
     }
+    async trace(req) {
+        const timestamp = new Date().toISOString();
+        this.saveLocal('rna:/operacional/bitacora', { ...req, created_at: timestamp }, 'TRACE');
+        const apiResult = await this.request('/v1/agents/trace', {
+            method: 'POST',
+            body: JSON.stringify(req),
+        });
+        return apiResult || { id: `local_${Date.now()}`, status: 'local' };
+    }
 }
 export const rnaLink = new RNALink();

@@ -65,6 +65,20 @@ export interface SuccessData {
   result: string;
 }
 
+export interface TraceData {
+  agent_id?: string;
+  session_id?: string;
+  cwd?: string;
+  command: string;
+  status: 'STARTED' | 'SUCCESS' | 'ERROR' | 'BLOCKED';
+  result_summary?: string;
+  stdout_ref?: string;
+  stderr_ref?: string;
+  error_message?: string;
+  duration_ms?: number;
+  metadata?: any;
+}
+
 function readLocalConfig(localPath: string): RNALocalConfig {
   try {
     const configPath = path.join(localPath, 'config.json');
@@ -260,6 +274,16 @@ export class RNALink {
       body: JSON.stringify({ error: errorMsg }),
     });
     return apiResult || [];
+  }
+
+  async trace(req: TraceData): Promise<any> {
+    const timestamp = new Date().toISOString();
+    this.saveLocal('rna:/operacional/bitacora', { ...req, created_at: timestamp }, 'TRACE');
+    const apiResult = await this.request('/v1/agents/trace', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+    return apiResult || { id: `local_${Date.now()}`, status: 'local' };
   }
 }
 

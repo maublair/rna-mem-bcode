@@ -43,6 +43,19 @@ export interface SuccessData {
     command: string;
     result: string;
 }
+export interface TraceData {
+    agent_id?: string;
+    session_id?: string;
+    cwd?: string;
+    command: string;
+    status: 'STARTED' | 'SUCCESS' | 'ERROR' | 'BLOCKED';
+    result_summary?: string;
+    stdout_ref?: string;
+    stderr_ref?: string;
+    error_message?: string;
+    duration_ms?: number;
+    metadata?: any;
+}
 export declare class RNALink {
     private apiKey;
     private serverUrl;
@@ -65,5 +78,6 @@ export declare class RNALink {
     learnFromError(req: ErrorData): Promise<void>;
     learnFromSuccess(req: SuccessData): Promise<void>;
     suggestFix(errorMsg: string): Promise<string[]>;
+    trace(req: TraceData): Promise<any>;
 }
 export declare const rnaLink: RNALink;

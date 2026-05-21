@@ -13,7 +13,7 @@ The goal is not just to store notes. The goal is to reduce repeated personalizat
 1. RNA must always accept memory writes, even when graph/vector/cache services are degraded.
 2. There must be one source of truth. Derived stores can be rebuilt.
 3. Agents receive short context injections, not raw history dumps.
-4. SIA is the memory governor: policy, approvals, pruning, task ownership, and sensitive-memory review.
+4. SIA is the memory governor through dashboard views, policy, approvals, pruning, task ownership, and sensitive-memory review. RNA must not replace or alter SIA's own memory system.
 5. Every agent/device has identity, permissions, audit logs, and revocable tokens.
 6. Secrets, raw private logs, and noisy transcripts are not memory. Summaries and reusable lessons are memory.
 7. RNA should become more valuable over time without making every request expensive.
@@ -96,6 +96,7 @@ Minimum canonical entities:
 - `tasks`: duties for `any`, `sia`, `claude`, `codex`, `gemini`, `ollama`, or specific devices.
 - `agents`: identity, capabilities, trust level, device binding.
 - `execution_traces`: commands, outcome, sanitized error, solved-by, reusable lesson.
+- `agent_bitacora`: immutable append-only command and result ledger for every agent.
 - `connectors`: integrations with IDEs, home server, chat apps, browsers, mobile.
 - `memory_edges`: relationships between facts, tasks, people, projects, devices.
 - `outbox`: pending projections/sync work.
@@ -239,6 +240,7 @@ Phase 2: Admin Console
 Phase 3: Intelligence Layer
 
 - SIA memory curator.
+- SIA dashboard RNA views without modifying SIA's internal memory.
 - Deduplication.
 - Confidence scoring.
 - Forget/archive policies.
