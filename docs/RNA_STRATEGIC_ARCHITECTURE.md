@@ -6,7 +6,9 @@ Last updated: 2026-05-21
 
 RNA is the shared memory and coordination brain for Mauricio, SIA, Claude, Codex, Gemini, Ollama, IDE agents, mobile devices, home servers, and future unknown agents.
 
-The goal is not just to store notes. The goal is to reduce repeated personalization, prevent context loss between chats and tools, save tokens by reusing solved knowledge, and let SIA govern an ordered hive of agents that can learn from work, errors, tasks, and the real world.
+The goal is not just to store notes. The goal is to reduce repeated personalization, prevent context loss between chats and tools, save tokens by reusing solved knowledge, and let SIA govern dashboard views over an ordered hive of agents that can learn from work, errors, tasks, and the real world.
+
+RNA should be simple to modify and grow, like Firebase-style collections, but navigable as a memory palace. See `docs/COLLECTIONS_AND_MEMORY_PALACE.md`.
 
 ## Core Principles
 
@@ -90,6 +92,8 @@ flowchart LR
 
 Minimum canonical entities:
 
+- `collections`: Firebase-like containers scoped to spaces.
+- `documents`: flexible JSON documents inside collections.
 - `spaces`: personal, empresarial, operacional, familia, casa, proyectos, agentes.
 - `facts`: concise atomic memories.
 - `memories`: curated facts promoted by SIA or trust policy.
@@ -221,6 +225,7 @@ Version updates should be tracked in a compatibility matrix: image tag, smoke te
 Phase 1: Stabilize Core
 
 - Make PostgreSQL canonical for facts/tasks/traces.
+- Add collection/document APIs and map facts/tasks/agent traces onto them.
 - Keep Neo4j/Qdrant writes asynchronous.
 - Add `/v1/tasks`.
 - Add `/v1/memory/search`.

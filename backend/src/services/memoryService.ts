@@ -68,6 +68,65 @@ export async function ensureMemorySchema() {
   await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_facts_type ON rna_facts(type)`);
   await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_facts_tags ON rna_facts USING GIN(tags)`);
   await postgres.query(`
+    CREATE TABLE IF NOT EXISTS rna_collections (
+      id TEXT PRIMARY KEY,
+      space_id TEXT REFERENCES rna_spaces(id) ON DELETE SET NULL,
+      name TEXT NOT NULL,
+      schema_version TEXT,
+      visibility TEXT NOT NULL DEFAULT 'shared',
+      owner_type TEXT NOT NULL DEFAULT 'system',
+      owner_id TEXT,
+      policy JSONB DEFAULT '{}'::JSONB,
+      metadata JSONB DEFAULT '{}'::JSONB,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now()
+    )
+  `);
+  await postgres.query(`
+    CREATE TABLE IF NOT EXISTS rna_documents (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      collection_id TEXT NOT NULL REFERENCES rna_collections(id) ON DELETE CASCADE,
+      path TEXT,
+      type TEXT NOT NULL,
+      title TEXT,
+      content TEXT,
+      data JSONB DEFAULT '{}'::JSONB,
+      tags TEXT[] DEFAULT ARRAY[]::TEXT[],
+      created_by TEXT,
+      updated_by TEXT,
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now()
+    )
+  `);
+  await postgres.query(`
+    CREATE TABLE IF NOT EXISTS rna_document_revisions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      document_id UUID NOT NULL REFERENCES rna_documents(id) ON DELETE CASCADE,
+      version INTEGER NOT NULL,
+      data JSONB DEFAULT '{}'::JSONB,
+      content TEXT,
+      changed_by TEXT,
+      change_reason TEXT,
+      created_at TIMESTAMPTZ DEFAULT now()
+    )
+  `);
+  await postgres.query(`
+    CREATE TABLE IF NOT EXISTS rna_collection_permissions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      collection_id TEXT NOT NULL REFERENCES rna_collections(id) ON DELETE CASCADE,
+      subject_type TEXT NOT NULL,
+      subject_id TEXT NOT NULL,
+      permissions TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+      created_at TIMESTAMPTZ DEFAULT now(),
+      UNIQUE(collection_id, subject_type, subject_id)
+    )
+  `);
+  await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_collections_space ON rna_collections(space_id)`);
+  await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_documents_collection_updated ON rna_documents(collection_id, updated_at DESC)`);
+  await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_documents_type ON rna_documents(type)`);
+  await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_documents_tags ON rna_documents USING GIN(tags)`);
+  await postgres.query(`
     CREATE TABLE IF NOT EXISTS rna_agent_bitacora (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       agent_id TEXT NOT NULL,
