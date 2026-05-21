@@ -57,3 +57,7 @@ Config base recomendada en cada dispositivo:
 - RNA queda como stack independiente de memoria e inteligencia auxiliar.
 - SIA no debe depender de RNA para memoria básica, sesión ni operación comercial.
 - La exposición pública y los cambios de runtime de RNA deben validarse sin afectar SIA.
+
+## Arquitectura estrategica
+
+Ver `docs/RNA_STRATEGIC_ARCHITECTURE.md` para la vision de RNA como cerebro compartido administrado por SIA, con memoria unificada para agentes, ahorro de tokens, frontend de gobierno, auth por dispositivos, despliegue estable y evolucion hacia control de casa.
