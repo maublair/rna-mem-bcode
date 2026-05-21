@@ -52,3 +52,8 @@ Config base recomendada en cada dispositivo:
 - `migrations/`: SQL de bootstrap.
 - `scripts/`: carga base de Neo4j.
 - `skill-client/`: paquete `@rna/mem-link` para agentes.
+
+## Estado de uso dentro de BlairCode
+- RNA queda como stack independiente de memoria e inteligencia auxiliar.
+- SIA no debe depender de RNA para memoria básica, sesión ni operación comercial.
+- La exposición pública y los cambios de runtime de RNA deben validarse sin afectar SIA.

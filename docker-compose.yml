@@ -35,7 +35,7 @@ services:
     networks:
       - rna-net
 
-  postgres:
+  rna-postgres:
     image: postgres:15-alpine
     container_name: rna-postgres
     ports:
@@ -103,7 +103,7 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: ${RNA_API_PORT:-3005}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      DATABASE_URL: ${RNA_DATABASE_URL:-postgresql://rna_admin:change_me@postgres:5432/rna_db}
+      DATABASE_URL: ${RNA_DATABASE_URL:-postgresql://rna_admin:change_me@rna-postgres:5432/rna_db}
       REDIS_URL: ${RNA_REDIS_URL:-redis://redis:6379}
       NEO4J_URI: ${RNA_NEO4J_URI:-bolt://neo4j:7687}
       NEO4J_USER: ${RNA_NEO4J_USER:-neo4j}
@@ -115,10 +115,13 @@ services:
       MINIO_SECRET_KEY: ${RNA_MINIO_SECRET_KEY:-change_me}
     networks:
       - rna-net
+      - bcode_gateway
 
 networks:
   rna-net:
     driver: bridge
+  bcode_gateway:
+    external: true
 
 volumes:
   neo4j_data:
