@@ -1,7 +1,6 @@
 import { Router } from 'express';
-import { v4 as uuidv4 } from 'uuid';
-import neo4j from '../services/neo4jService.js';
 import { deviceAuth, AuthedRequest } from '../middleware/deviceAuth.js';
+import { appendBitacora, queryBitacora, queryFacts, storeFact } from '../services/memoryService.js';
 
 const router = Router();
 router.use(deviceAuth);
@@ -11,37 +10,14 @@ function normalizeAgent(agentId: unknown) {
   return value || 'unknown';
 }
 
-function summarizeFact(fact: any) {
-  const props = fact.properties || fact;
-  return {
-    id: props.id,
-    content: props.content,
-    type: props.type,
-    tags: props.tags || [],
-    created_at: props.created_at,
-  };
-}
-
 async function storeOperationalFact(input: { content: string; type: string; tags: string[] }) {
-  const id = uuidv4();
-  const timestamp = new Date().toISOString();
-  await neo4j.runQuery(
-    `
-    MERGE (s:Space {id: 'operacional'})
-      ON CREATE SET s.name = 'operacional', s.path = 'operacional'
-    CREATE (f:Fact {
-      id: $id,
-      content: $content,
-      type: $type,
-      tags: $tags,
-      created_at: $timestamp
-    })
-    CREATE (f)-[:IN_SPACE]->(s)
-    RETURN f
-    `,
-    { id, content: input.content, type: input.type, tags: input.tags, timestamp }
-  );
-  return { id, status: 'created' };
+  const fact = await storeFact({
+    spaceId: 'operacional',
+    content: input.content,
+    type: input.type,
+    tags: input.tags,
+  });
+  return { id: fact.id, status: 'created', fact };
 }
 
 router.post('/bootstrap', async (req: AuthedRequest, res) => {
@@ -50,32 +26,19 @@ router.post('/bootstrap', async (req: AuthedRequest, res) => {
   const maxItems = Math.min(Number(req.body?.max_items || 12), 25);
 
   try {
-    const result = await neo4j.runQuery(
-      `
-      MATCH (f:Fact)-[:IN_SPACE]->(:Space {id: 'operacional'})
-      WHERE f.type IN ['task', 'error-pattern', 'success-pattern', 'decision', 'note']
-        AND (
-          f.type <> 'task'
-          OR 'for:any' IN coalesce(f.tags, [])
-          OR $agentTag IN coalesce(f.tags, [])
-        )
-      RETURN f
-      ORDER BY f.created_at DESC
-      LIMIT $maxItems
-      `,
-      { agentTag: `for:${agentId}`, maxItems }
-    );
-    const facts = result.records.map(record => summarizeFact(record.get('f')));
-    const tasks = facts.filter(fact => fact.type === 'task');
-    const learnings = facts.filter(fact => fact.type !== 'task');
+    const [tasks, learnings] = await Promise.all([
+      queryFacts({ spaceId: 'operacional', type: 'task', targetAgent: agentId, limit: maxItems }),
+      queryFacts({ spaceId: 'operacional', limit: maxItems }),
+    ]);
+    const usefulLearnings = learnings.filter(fact => fact.type !== 'task');
     const injection = [
       `RNA bootstrap for ${agentId}.`,
       message ? `Session: ${message}` : '',
       tasks.length ? `Open tasks: ${tasks.map(task => task.content).join(' | ')}` : 'Open tasks: none found.',
-      learnings.length ? `Useful learnings: ${learnings.map(item => item.content).join(' | ')}` : 'Useful learnings: none found.',
+      usefulLearnings.length ? `Useful learnings: ${usefulLearnings.map(item => item.content).join(' | ')}` : 'Useful learnings: none found.',
     ].filter(Boolean).join('\n');
 
-    res.json({ injection, tasks, learnings });
+    res.json({ injection, tasks, learnings: usefulLearnings });
   } catch (error: any) {
     console.error('Agent bootstrap failed:', error);
     res.status(500).json({ error: 'bootstrap_failed', detail: error.message });
@@ -99,6 +62,49 @@ router.post('/learn/error', async (req: AuthedRequest, res) => {
   res.status(201).json(result);
 });
 
+router.post('/trace', async (req: AuthedRequest, res) => {
+  const agentId = normalizeAgent(req.body?.agent_id || req.device?.deviceName);
+  const command = String(req.body?.command || '').trim();
+  const status = String(req.body?.status || '').trim().toUpperCase();
+  if (!command || !status) {
+    return res.status(400).json({ error: 'missing_command_or_status' });
+  }
+
+  try {
+    const entry = await appendBitacora({
+      agentId,
+      deviceId: req.device?.deviceId,
+      sessionId: req.body?.session_id ? String(req.body.session_id) : undefined,
+      cwd: req.body?.cwd ? String(req.body.cwd) : undefined,
+      command,
+      status,
+      resultSummary: req.body?.result_summary ? String(req.body.result_summary) : undefined,
+      stdoutRef: req.body?.stdout_ref ? String(req.body.stdout_ref) : undefined,
+      stderrRef: req.body?.stderr_ref ? String(req.body.stderr_ref) : undefined,
+      errorMessage: req.body?.error_message ? String(req.body.error_message) : undefined,
+      durationMs: req.body?.duration_ms ? Number(req.body.duration_ms) : undefined,
+      metadata: req.body?.metadata || {},
+    });
+    res.status(201).json(entry);
+  } catch (error: any) {
+    console.error('Agent trace append failed:', error);
+    res.status(500).json({ error: 'trace_failed', detail: error.message });
+  }
+});
+
+router.get('/trace', async (req: AuthedRequest, res) => {
+  try {
+    const entries = await queryBitacora({
+      agentId: req.query.agent_id ? normalizeAgent(req.query.agent_id) : undefined,
+      limit: Number(req.query.limit || 100),
+    });
+    res.json(entries);
+  } catch (error: any) {
+    console.error('Agent trace query failed:', error);
+    res.status(500).json({ error: 'trace_query_failed', detail: error.message });
+  }
+});
+
 router.post('/learn/success', async (req: AuthedRequest, res) => {
   const command = String(req.body?.command || '').trim();
   const resultText = String(req.body?.result || '').trim();
@@ -119,18 +125,15 @@ router.post('/suggest', async (req: AuthedRequest, res) => {
   if (!error) return res.status(400).json({ error: 'missing_error' });
 
   try {
-    const result = await neo4j.runQuery(
-      `
-      MATCH (f:Fact)-[:IN_SPACE]->(:Space {id: 'operacional'})
-      WHERE f.type IN ['error-pattern', 'success-pattern']
-        AND toLower(f.content) CONTAINS $needle
-      RETURN f
-      ORDER BY f.created_at DESC
-      LIMIT 8
-      `,
-      { needle: error.slice(0, 120) }
+    const facts = await queryFacts({ spaceId: 'operacional', limit: 100 });
+    const needle = error.slice(0, 120);
+    res.json(
+      facts
+        .filter(fact => ['error-pattern', 'success-pattern'].includes(fact.type))
+        .filter(fact => String(fact.content || '').toLowerCase().includes(needle))
+        .slice(0, 8)
+        .map(fact => fact.content)
     );
-    res.json(result.records.map(record => summarizeFact(record.get('f')).content));
   } catch (queryError: any) {
     console.error('Agent suggest failed:', queryError);
     res.status(500).json({ error: 'suggest_failed', detail: queryError.message });
