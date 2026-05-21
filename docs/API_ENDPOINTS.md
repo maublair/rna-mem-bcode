@@ -28,6 +28,29 @@ Todos los endpoints (excepto `/health`) esperan el header de autenticación:
 
 ### `GET /v1/facts`
 - **Desc:** Recupera facts. Soporta queries simples.
+- **Query:** `space` o `space_id`, `type`, `tag`, `target_agent`, `limit`.
+
+### `POST /v1/facts`
+- **Desc:** Agrega un nuevo Fact y crea el espacio si no existe.
+- **Body:** `{ "space": "operacional", "content": "...", "type": "note", "tags": [] }`
+
+## Agentes y Memoria Compartida
+### `POST /v1/agents/bootstrap`
+- **Desc:** Devuelve contexto corto para ahorrar tokens: tareas abiertas y aprendizajes recientes.
+- **Body:** `{ "agent_id": "codex", "message": "...", "max_items": 12 }`
+- **Respuesta:** `{ "injection": "...", "tasks": [], "learnings": [] }`
+
+### `POST /v1/agents/learn/error`
+- **Desc:** Guarda un patrón de error resuelto o pendiente.
+- **Body:** `{ "agent_id": "codex", "command": "...", "error": "...", "solution": "..." }`
+
+### `POST /v1/agents/learn/success`
+- **Desc:** Guarda un comando o flujo exitoso reutilizable.
+- **Body:** `{ "agent_id": "codex", "command": "...", "result": "..." }`
+
+### `POST /v1/agents/suggest`
+- **Desc:** Busca aprendizajes relacionados con un error para no resolverlo desde cero.
+- **Body:** `{ "error": "..." }`
 
 ## Transacciones Financieras
 ### `GET /v1/transactions`
