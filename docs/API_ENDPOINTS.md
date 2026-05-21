@@ -60,6 +60,27 @@ Todos los endpoints (excepto `/health`) esperan el header de autenticación:
 - **Desc:** Consulta entradas de bitácora.
 - **Query:** `agent_id`, `limit`.
 
+## Colecciones
+### `GET /v1/collections`
+- **Desc:** Lista colecciones tipo Firebase.
+
+### `POST /v1/collections`
+- **Desc:** Crea o actualiza una coleccion.
+- **Body:** `{ "id": "agents/codex/memory", "space_id": "agents/codex", "name": "Codex Memory", "visibility": "private", "policy": {} }`
+
+### `GET /v1/collections/:collectionId/docs`
+- **Desc:** Lista documentos de una coleccion.
+
+### `POST /v1/collections/:collectionId/docs`
+- **Desc:** Crea documento JSON flexible.
+- **Body:** `{ "type": "note", "title": "...", "content": "...", "data": {}, "tags": [] }`
+
+### `GET /v1/collections/docs/:docId`
+- **Desc:** Lee un documento.
+
+### `PATCH /v1/collections/docs/:docId`
+- **Desc:** Actualiza documento y guarda revision.
+
 ## Transacciones Financieras
 ### `GET /v1/transactions`
 - **Desc:** Recupera transacciones limitadas a las últimas 50.

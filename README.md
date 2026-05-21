@@ -61,3 +61,5 @@ Config base recomendada en cada dispositivo:
 ## Arquitectura estrategica
 
 Ver `docs/RNA_STRATEGIC_ARCHITECTURE.md` para la vision de RNA como cerebro compartido administrado por SIA, con memoria unificada para agentes, ahorro de tokens, frontend de gobierno, auth por dispositivos, despliegue estable y evolucion hacia control de casa.
+
+Ver tambien `docs/COLLECTIONS_AND_MEMORY_PALACE.md` para el modelo de colecciones tipo Firebase, espacios por agente, sala publica, pizarras de tareas, rutinas, empresas, marcas, personal y contabilidad.
