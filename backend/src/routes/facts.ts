@@ -8,9 +8,41 @@ import { deviceAuth } from '../middleware/deviceAuth.js';
 const router = Router();
 router.use(deviceAuth);
 
-router.get('/', async (_req, res) => {
+router.get('/', async (req, res) => {
+  const { space, space_id, type, tag, target_agent } = req.query;
+  const params: any = {
+    limit: Math.min(Number(req.query.limit || 50), 200),
+  };
+  const filters = ['1 = 1'];
+
+  if (space || space_id) {
+    params.space_id = String(space_id || space);
+    filters.push('s.id = $space_id');
+  }
+  if (type) {
+    params.type = String(type);
+    filters.push('f.type = $type');
+  }
+  if (tag) {
+    params.tag = String(tag);
+    filters.push('$tag IN coalesce(f.tags, [])');
+  }
+  if (target_agent) {
+    params.target_agent = `for:${String(target_agent)}`;
+    filters.push("('for:any' IN coalesce(f.tags, []) OR $target_agent IN coalesce(f.tags, []))");
+  }
+
   try {
-    const result = await neo4j.runQuery('MATCH (f:Fact) RETURN f LIMIT 50');
+    const result = await neo4j.runQuery(
+      `
+      MATCH (f:Fact)-[:IN_SPACE]->(s:Space)
+      WHERE ${filters.join(' AND ')}
+      RETURN f
+      ORDER BY f.created_at DESC
+      LIMIT $limit
+      `,
+      params
+    );
     const facts = result.records.map(record => record.get('f').properties);
     res.json(facts);
   } catch (error) {
@@ -19,13 +51,18 @@ router.get('/', async (_req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { space_id, content, type, tags = [] } = req.body;
+  const { content, type, tags = [] } = req.body;
+  const space_id = String(req.body.space_id || req.body.space || '').replace('rna:/', '');
+  if (!space_id || !content || !type) {
+    return res.status(400).json({ error: 'missing_required_fields', required: ['space or space_id', 'content', 'type'] });
+  }
   const id = uuidv4();
   const timestamp = new Date().toISOString();
 
   try {
     await neo4j.runQuery(`
-      MATCH (s:Space {id: $space_id})
+      MERGE (s:Space {id: $space_id})
+        ON CREATE SET s.name = $space_id, s.path = $space_id
       CREATE (f:Fact {
         id: $id,
         content: $content,
