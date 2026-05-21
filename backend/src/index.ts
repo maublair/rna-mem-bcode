@@ -6,6 +6,7 @@ import healthRoutes from './routes/health.js';
 import authRoutes from './routes/auth.js';
 import spacesRoutes from './routes/spaces.js';
 import factsRoutes from './routes/facts.js';
+import agentsRoutes from './routes/agents.js';
 import transactionsRoutes from './routes/transactions.js';
 import devicesRoutes from './routes/devices.js';
 import initQdrant from './utils/initQdrant.js';
@@ -23,6 +24,7 @@ app.use('/health', healthRoutes);
 app.use('/auth', authRoutes);
 app.use('/v1/spaces', spacesRoutes);
 app.use('/v1/facts', factsRoutes);
+app.use('/v1/agents', agentsRoutes);
 app.use('/v1/transactions', transactionsRoutes);
 app.use('/v1/devices', devicesRoutes);
 
