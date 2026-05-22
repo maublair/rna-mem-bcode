@@ -1,5 +1,9 @@
+import { useState } from 'react';
 import { X } from 'lucide-react';
 import { Server, Service, Device } from '../../types/infrastructure';
+import { ServerForm } from '../forms/ServerForm';
+import { ServiceForm } from '../forms/ServiceForm';
+import { DeviceForm } from '../forms/DeviceForm';
 
 interface EntityDetailProps {
   entityType: string;
@@ -8,9 +12,56 @@ interface EntityDetailProps {
 }
 
 export function EntityDetail({ entityType, data, onClose }: EntityDetailProps) {
-  const isServer = (d: any): d is Server => d.os !== undefined && d.osVersion !== undefined;
-  const isService = (d: any): d is Service => d.type !== undefined && d.port !== undefined;
-  const isDevice = (d: any): d is Device => d.deviceType !== undefined;
+  const [isEditing, setIsEditing] = useState(false);
+
+  const isServer = (d: any): d is Server => d.os !== undefined;
+  const isService = (d: any): d is Service => d.type !== undefined && 'port' in d;
+  const isDevice = (d: any): d is Device => d.type !== undefined && 'owner' in d;
+
+  const handleEditSuccess = () => {
+    setIsEditing(false);
+    onClose();
+  };
+
+  if (isEditing) {
+    return (
+      <div className="h-full flex flex-col bg-slate-900 overflow-hidden">
+        <div className="p-4 border-b border-slate-700 flex items-center justify-between flex-shrink-0">
+          <h2 className="text-lg font-bold text-slate-100">Edit {entityType}</h2>
+          <button
+            onClick={() => setIsEditing(false)}
+            className="p-2 hover:bg-slate-800 rounded transition"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-auto p-4">
+          {isServer(data) && (
+            <ServerForm
+              initialData={data}
+              onSubmit={handleEditSuccess}
+              onCancel={() => setIsEditing(false)}
+            />
+          )}
+          {isService(data) && (
+            <ServiceForm
+              initialData={data}
+              onSubmit={handleEditSuccess}
+              onCancel={() => setIsEditing(false)}
+            />
+          )}
+          {isDevice(data) && (
+            <DeviceForm
+              initialData={data}
+              onSubmit={handleEditSuccess}
+              onCancel={() => setIsEditing(false)}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col bg-slate-900 overflow-hidden">
@@ -162,7 +213,10 @@ export function EntityDetail({ entityType, data, onClose }: EntityDetailProps) {
 
       {/* Footer */}
       <div className="p-4 border-t border-slate-700 flex-shrink-0">
-        <button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2 rounded transition">
+        <button
+          onClick={() => setIsEditing(true)}
+          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2 rounded transition"
+        >
           Edit
         </button>
       </div>
