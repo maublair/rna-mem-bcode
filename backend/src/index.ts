@@ -10,6 +10,8 @@ import agentsRoutes from './routes/agents.js';
 import collectionsRoutes from './routes/collections.js';
 import transactionsRoutes from './routes/transactions.js';
 import devicesRoutes from './routes/devices.js';
+import infrastructureRoutes from './routes/infrastructure.js';
+import systemRoutes from './routes/system.js';
 import initQdrant from './utils/initQdrant.js';
 import { redisClient } from './services/embeddingService.js';
 
@@ -29,6 +31,8 @@ app.use('/v1/agents', agentsRoutes);
 app.use('/v1/collections', collectionsRoutes);
 app.use('/v1/transactions', transactionsRoutes);
 app.use('/v1/devices', devicesRoutes);
+app.use('/v1/infrastructure', infrastructureRoutes);
+app.use('/v1/system', systemRoutes);
 
 app.get('/', (_req: Request, res: Response) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString(), service: 'rna-api' });
