@@ -37,7 +37,25 @@ export interface BitacoraInput {
   metadata?: any;
 }
 
+let schemaReady = false;
+let schemaPromise: Promise<void> | null = null;
+
 export async function ensureMemorySchema() {
+  if (schemaReady) return;
+  if (schemaPromise) return schemaPromise;
+
+  schemaPromise = ensureMemorySchemaInternal()
+    .then(() => {
+      schemaReady = true;
+    })
+    .finally(() => {
+      schemaPromise = null;
+    });
+
+  return schemaPromise;
+}
+
+async function ensureMemorySchemaInternal() {
   await postgres.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto`);
   await postgres.query(`
     CREATE TABLE IF NOT EXISTS rna_spaces (
