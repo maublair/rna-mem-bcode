@@ -7,12 +7,13 @@ interface AppShellProps {
   onViewModeChange: (mode: 'wiki' | 'graph') => void;
   isHealthy: boolean;
   mainContent: ReactNode;
+  detailPanel?: ReactNode;
 }
 
-export function AppShell({ viewMode, onViewModeChange, isHealthy, mainContent }: AppShellProps) {
+export function AppShell({ viewMode, onViewModeChange, isHealthy, mainContent, detailPanel }: AppShellProps) {
   return (
     <div className="flex h-screen bg-slate-950 text-slate-100">
-      {/* Sidebar */}
+      {/* Left Sidebar */}
       <div className="w-64 bg-slate-900 border-r border-slate-700 flex flex-col">
         <div className="p-4 border-b border-slate-700">
           <h1 className="text-xl font-bold text-indigo-400">RNA</h1>
@@ -37,6 +38,13 @@ export function AppShell({ viewMode, onViewModeChange, isHealthy, mainContent }:
           {mainContent}
         </div>
       </div>
+
+      {/* Right Detail Panel */}
+      {detailPanel && (
+        <div className="w-96 bg-slate-900 border-l border-slate-700 flex flex-col overflow-hidden">
+          {detailPanel}
+        </div>
+      )}
     </div>
   );
 }

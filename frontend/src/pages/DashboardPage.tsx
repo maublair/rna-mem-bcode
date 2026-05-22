@@ -3,9 +3,11 @@ import { useServers, useServices, useDevices, useGraph, useHealth } from '../hoo
 import { AppShell } from '../components/layout/AppShell';
 import { WikiView } from '../components/wiki/WikiView';
 import { GraphView } from '../components/graph/GraphView';
+import { EntityDetail } from '../components/wiki/EntityDetail';
 
 export function DashboardPage() {
   const [viewMode, setViewMode] = useState<'wiki' | 'graph'>('wiki');
+  const [selectedEntity, setSelectedEntity] = useState<{ type: string; id: string } | null>(null);
 
   const serversQuery = useServers();
   const servicesQuery = useServices();
@@ -14,6 +16,19 @@ export function DashboardPage() {
   const healthQuery = useHealth();
 
   const isLoading = serversQuery.isLoading || servicesQuery.isLoading || devicesQuery.isLoading;
+
+  const selectedData =
+    selectedEntity?.type === 'server'
+      ? serversQuery.data?.find((s) => s.id === selectedEntity.id)
+      : selectedEntity?.type === 'service'
+        ? servicesQuery.data?.find((s) => s.id === selectedEntity.id)
+        : selectedEntity?.type === 'device'
+          ? devicesQuery.data?.find((d) => d.id === selectedEntity.id)
+          : null;
+
+  const handleSelectEntity = (type: string, id: string) => {
+    setSelectedEntity({ type, id });
+  };
 
   return (
     <AppShell
@@ -30,10 +45,24 @@ export function DashboardPage() {
             servers={serversQuery.data || []}
             services={servicesQuery.data || []}
             devices={devicesQuery.data || []}
+            onSelectEntity={handleSelectEntity}
           />
         ) : (
-          <GraphView graph={graphQuery.data} isLoading={graphQuery.isLoading} />
+          <GraphView
+            graph={graphQuery.data}
+            isLoading={graphQuery.isLoading}
+            onSelectEntity={handleSelectEntity}
+          />
         )
+      }
+      detailPanel={
+        selectedEntity && selectedData ? (
+          <EntityDetail
+            entityType={selectedEntity.type}
+            data={selectedData}
+            onClose={() => setSelectedEntity(null)}
+          />
+        ) : null
       }
     />
   );
