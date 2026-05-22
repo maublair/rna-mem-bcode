@@ -112,6 +112,25 @@ services:
       - rna-net
       - bcode_gateway
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: "https://rna.bcode.work"
+    container_name: rna-frontend
+    restart: always
+    ports:
+      - "127.0.0.1:3008:80"
+    networks:
+      - rna-net
+      - bcode_gateway
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
 networks:
   rna-net:
     driver: bridge
