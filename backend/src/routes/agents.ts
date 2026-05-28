@@ -1,6 +1,19 @@
 import { Router } from 'express';
 import { deviceAuth, AuthedRequest } from '../middleware/deviceAuth.js';
-import { appendBitacora, queryBitacora, queryFacts, storeFact } from '../services/memoryService.js';
+import {
+  appendBitacora,
+  listHandoffCards,
+  listSessions,
+  listTopicRelations,
+  listTopics,
+  queryBitacora,
+  queryFacts,
+  storeFact,
+  upsertHandoffCard,
+  upsertSession,
+  upsertTopic,
+  upsertTopicRelation,
+} from '../services/memoryService.js';
 
 const router = Router();
 router.use(deviceAuth);
@@ -42,6 +55,156 @@ router.post('/bootstrap', async (req: AuthedRequest, res) => {
   } catch (error: any) {
     console.error('Agent bootstrap failed:', error);
     res.status(500).json({ error: 'bootstrap_failed', detail: error.message });
+  }
+});
+
+router.get('/sessions', async (req: AuthedRequest, res) => {
+  try {
+    const sessions = await listSessions(Number(req.query.limit || 50), req.query.agent_id ? normalizeAgent(req.query.agent_id) : undefined);
+    res.json(sessions);
+  } catch (error: any) {
+    console.error('Session list failed:', error);
+    res.status(500).json({ error: 'session_list_failed', detail: error.message });
+  }
+});
+
+router.post('/session', async (req: AuthedRequest, res) => {
+  const agentId = normalizeAgent(req.body?.agent_id || req.device?.deviceName);
+  const sessionId = String(req.body?.session_id || '').trim();
+  const objective = String(req.body?.objective || req.body?.message || '').trim();
+  if (!sessionId || !objective) {
+    return res.status(400).json({ error: 'missing_session_id_or_objective' });
+  }
+  try {
+    const session = await upsertSession({
+      agent_id: agentId,
+      session_id: sessionId,
+      objective,
+      status: String(req.body?.status || 'active'),
+      summary: req.body?.summary ? String(req.body.summary) : null,
+      started_at: req.body?.started_at ? String(req.body.started_at) : undefined,
+      ended_at: req.body?.ended_at ? String(req.body.ended_at) : undefined,
+      metadata: req.body?.metadata || {},
+    });
+    res.status(201).json(session);
+  } catch (error: any) {
+    console.error('Session upsert failed:', error);
+    res.status(500).json({ error: 'session_upsert_failed', detail: error.message });
+  }
+});
+
+router.post('/session/:sessionId/close', async (req: AuthedRequest, res) => {
+  const agentId = normalizeAgent(req.body?.agent_id || req.device?.deviceName);
+  const sessionId = String(req.params.sessionId || '').trim();
+  if (!sessionId) return res.status(400).json({ error: 'missing_session_id' });
+  try {
+    const session = await upsertSession({
+      agent_id: agentId,
+      session_id: sessionId,
+      objective: String(req.body?.objective || req.body?.message || 'closed-session').trim(),
+      status: 'closed',
+      summary: req.body?.summary ? String(req.body.summary) : null,
+      started_at: req.body?.started_at ? String(req.body.started_at) : undefined,
+      ended_at: req.body?.ended_at ? String(req.body.ended_at) : new Date().toISOString(),
+      metadata: req.body?.metadata || {},
+    });
+    res.json(session);
+  } catch (error: any) {
+    console.error('Session close failed:', error);
+    res.status(500).json({ error: 'session_close_failed', detail: error.message });
+  }
+});
+
+router.get('/topics', async (req: AuthedRequest, res) => {
+  try {
+    res.json(await listTopics(Number(req.query.limit || 50)));
+  } catch (error: any) {
+    console.error('Topic list failed:', error);
+    res.status(500).json({ error: 'topic_list_failed', detail: error.message });
+  }
+});
+
+router.post('/topics', async (req: AuthedRequest, res) => {
+  const topicId = String(req.body?.topic_id || '').trim();
+  const title = String(req.body?.title || '').trim();
+  if (!topicId || !title) return res.status(400).json({ error: 'missing_topic_id_or_title' });
+  try {
+    res.status(201).json(
+      await upsertTopic({
+        topic_id: topicId,
+        title,
+        summary: req.body?.summary ? String(req.body.summary) : null,
+        tags: Array.isArray(req.body?.tags) ? req.body.tags.map(String) : [],
+        session_id: req.body?.session_id ? String(req.body.session_id) : null,
+        related_topics: Array.isArray(req.body?.related_topics) ? req.body.related_topics.map(String) : [],
+        metadata: req.body?.metadata || {},
+      })
+    );
+  } catch (error: any) {
+    console.error('Topic upsert failed:', error);
+    res.status(500).json({ error: 'topic_upsert_failed', detail: error.message });
+  }
+});
+
+router.get('/topics/relations', async (req: AuthedRequest, res) => {
+  try {
+    res.json(await listTopicRelations(Number(req.query.limit || 100)));
+  } catch (error: any) {
+    console.error('Topic relation list failed:', error);
+    res.status(500).json({ error: 'topic_relation_list_failed', detail: error.message });
+  }
+});
+
+router.post('/topics/relations', async (req: AuthedRequest, res) => {
+  const sourceTopic = String(req.body?.source_topic || '').trim();
+  const targetTopic = String(req.body?.target_topic || '').trim();
+  const relationType = String(req.body?.relation_type || 'related').trim();
+  if (!sourceTopic || !targetTopic) return res.status(400).json({ error: 'missing_relation_topics' });
+  try {
+    res.status(201).json(
+      await upsertTopicRelation({
+        source_topic: sourceTopic,
+        target_topic: targetTopic,
+        relation_type: relationType,
+        weight: Number(req.body?.weight || 0.5),
+        metadata: req.body?.metadata || {},
+      })
+    );
+  } catch (error: any) {
+    console.error('Topic relation upsert failed:', error);
+    res.status(500).json({ error: 'topic_relation_upsert_failed', detail: error.message });
+  }
+});
+
+router.get('/handoff', async (req: AuthedRequest, res) => {
+  try {
+    res.json(await listHandoffCards(Number(req.query.limit || 50), req.query.agent_id ? normalizeAgent(req.query.agent_id) : undefined));
+  } catch (error: any) {
+    console.error('Handoff list failed:', error);
+    res.status(500).json({ error: 'handoff_list_failed', detail: error.message });
+  }
+});
+
+router.post('/handoff', async (req: AuthedRequest, res) => {
+  const agentId = normalizeAgent(req.body?.agent_id || req.device?.deviceName);
+  const summary = String(req.body?.summary || '').trim();
+  if (!summary) return res.status(400).json({ error: 'missing_summary' });
+  try {
+    res.status(201).json(
+      await upsertHandoffCard({
+        agent_id: agentId,
+        session_id: req.body?.session_id ? String(req.body.session_id) : null,
+        topic_id: req.body?.topic_id ? String(req.body.topic_id) : null,
+        summary,
+        next_steps: Array.isArray(req.body?.next_steps) ? req.body.next_steps.map(String) : [],
+        blockers: Array.isArray(req.body?.blockers) ? req.body.blockers.map(String) : [],
+        avoid: Array.isArray(req.body?.avoid) ? req.body.avoid.map(String) : [],
+        metadata: req.body?.metadata || {},
+      })
+    );
+  } catch (error: any) {
+    console.error('Handoff upsert failed:', error);
+    res.status(500).json({ error: 'handoff_upsert_failed', detail: error.message });
   }
 });
 

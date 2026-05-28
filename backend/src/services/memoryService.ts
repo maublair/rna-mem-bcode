@@ -45,6 +45,79 @@ export interface SnapshotHealthInput {
   details?: any;
 }
 
+export interface SessionRecord {
+  id: string;
+  agent_id: string;
+  session_id: string;
+  objective: string;
+  status: string;
+  summary?: string | null;
+  started_at?: string | null;
+  ended_at?: string | null;
+  metadata?: Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SessionInput {
+  agent_id: string;
+  session_id: string;
+  objective: string;
+  status?: string;
+  summary?: string | null;
+  started_at?: string | null;
+  ended_at?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface TopicRecord {
+  id: string;
+  topic_id: string;
+  title: string;
+  summary?: string | null;
+  tags?: string[];
+  session_id?: string | null;
+  related_topics?: string[];
+  metadata?: Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface TopicInput {
+  topic_id: string;
+  title: string;
+  summary?: string | null;
+  tags?: string[];
+  session_id?: string | null;
+  related_topics?: string[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface HandoffRecord {
+  id: string;
+  agent_id: string;
+  session_id?: string | null;
+  topic_id?: string | null;
+  summary: string;
+  next_steps?: string[];
+  blockers?: string[];
+  avoid?: string[];
+  metadata?: Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface HandoffInput {
+  agent_id: string;
+  session_id?: string | null;
+  topic_id?: string | null;
+  summary: string;
+  next_steps?: string[];
+  blockers?: string[];
+  avoid?: string[];
+  metadata?: Record<string, unknown>;
+}
+
 let schemaReady = false;
 let schemaPromise: Promise<void> | null = null;
 
@@ -201,6 +274,65 @@ async function ensureMemorySchemaInternal() {
   `);
   await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_restore_jobs_created ON rna_restore_jobs(created_at DESC)`);
   await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_restore_jobs_status ON rna_restore_jobs(status)`);
+  await postgres.query(`
+    CREATE TABLE IF NOT EXISTS rna_sessions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      agent_id TEXT NOT NULL,
+      session_id TEXT NOT NULL UNIQUE,
+      objective TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      summary TEXT,
+      started_at TIMESTAMPTZ DEFAULT now(),
+      ended_at TIMESTAMPTZ,
+      metadata JSONB DEFAULT '{}'::JSONB,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now()
+    )
+  `);
+  await postgres.query(`
+    CREATE TABLE IF NOT EXISTS rna_topics (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      topic_id TEXT NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      summary TEXT,
+      tags TEXT[] DEFAULT ARRAY[]::TEXT[],
+      session_id TEXT,
+      related_topics TEXT[] DEFAULT ARRAY[]::TEXT[],
+      metadata JSONB DEFAULT '{}'::JSONB,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now()
+    )
+  `);
+  await postgres.query(`
+    CREATE TABLE IF NOT EXISTS rna_topic_relations (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      source_topic TEXT NOT NULL,
+      target_topic TEXT NOT NULL,
+      relation_type TEXT NOT NULL,
+      weight NUMERIC(4,3) DEFAULT 0.5,
+      metadata JSONB DEFAULT '{}'::JSONB,
+      created_at TIMESTAMPTZ DEFAULT now()
+    )
+  `);
+  await postgres.query(`
+    CREATE TABLE IF NOT EXISTS rna_handoff_cards (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      agent_id TEXT NOT NULL,
+      session_id TEXT,
+      topic_id TEXT,
+      summary TEXT NOT NULL,
+      next_steps TEXT[] DEFAULT ARRAY[]::TEXT[],
+      blockers TEXT[] DEFAULT ARRAY[]::TEXT[],
+      avoid TEXT[] DEFAULT ARRAY[]::TEXT[],
+      metadata JSONB DEFAULT '{}'::JSONB,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now()
+    )
+  `);
+  await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_sessions_agent_created ON rna_sessions(agent_id, created_at DESC)`);
+  await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_topics_created ON rna_topics(created_at DESC)`);
+  await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_topic_relations_source_target ON rna_topic_relations(source_topic, target_topic)`);
+  await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_handoff_cards_agent_created ON rna_handoff_cards(agent_id, created_at DESC)`);
   await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_collections_space ON rna_collections(space_id)`);
   await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_documents_collection_updated ON rna_documents(collection_id, updated_at DESC)`);
   await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_documents_type ON rna_documents(type)`);
@@ -280,6 +412,145 @@ export async function storeFact(input: FactInput) {
   const fact = result.rows[0];
   void projectFact(fact);
   return fact;
+}
+
+export async function upsertSession(input: SessionInput) {
+  await ensureMemorySchema();
+  const result = await postgres.query(
+    `INSERT INTO rna_sessions (agent_id, session_id, objective, status, summary, started_at, ended_at, metadata)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+     ON CONFLICT (session_id)
+     DO UPDATE SET
+       agent_id = EXCLUDED.agent_id,
+       objective = EXCLUDED.objective,
+       status = EXCLUDED.status,
+       summary = EXCLUDED.summary,
+       started_at = EXCLUDED.started_at,
+       ended_at = EXCLUDED.ended_at,
+       metadata = EXCLUDED.metadata,
+       updated_at = now()
+     RETURNING id, agent_id, session_id, objective, status, summary, started_at, ended_at, metadata, created_at, updated_at`,
+    [
+      input.agent_id,
+      input.session_id,
+      input.objective,
+      input.status || 'active',
+      input.summary || null,
+      input.started_at || null,
+      input.ended_at || null,
+      input.metadata || {},
+    ]
+  );
+  return result.rows[0];
+}
+
+export async function listSessions(limit = 50, agentId?: string) {
+  await ensureMemorySchema();
+  const result = await postgres.query(
+    `SELECT id, agent_id, session_id, objective, status, summary, started_at, ended_at, metadata, created_at, updated_at
+     FROM rna_sessions
+     WHERE ($1::text IS NULL OR agent_id = $1)
+     ORDER BY updated_at DESC
+     LIMIT $2`,
+    [agentId || null, Math.min(limit, 200)]
+  );
+  return result.rows;
+}
+
+export async function upsertTopic(input: TopicInput) {
+  await ensureMemorySchema();
+  const result = await postgres.query(
+    `INSERT INTO rna_topics (topic_id, title, summary, tags, session_id, related_topics, metadata)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)
+     ON CONFLICT (topic_id)
+     DO UPDATE SET
+       title = EXCLUDED.title,
+       summary = EXCLUDED.summary,
+       tags = EXCLUDED.tags,
+       session_id = EXCLUDED.session_id,
+       related_topics = EXCLUDED.related_topics,
+       metadata = EXCLUDED.metadata,
+       updated_at = now()
+     RETURNING id, topic_id, title, summary, tags, session_id, related_topics, metadata, created_at, updated_at`,
+    [
+      input.topic_id,
+      input.title,
+      input.summary || null,
+      input.tags || [],
+      input.session_id || null,
+      input.related_topics || [],
+      input.metadata || {},
+    ]
+  );
+  return result.rows[0];
+}
+
+export async function listTopics(limit = 50) {
+  await ensureMemorySchema();
+  const result = await postgres.query(
+    `SELECT id, topic_id, title, summary, tags, session_id, related_topics, metadata, created_at, updated_at
+     FROM rna_topics
+     ORDER BY updated_at DESC
+     LIMIT $1`,
+    [Math.min(limit, 200)]
+  );
+  return result.rows;
+}
+
+export async function upsertTopicRelation(input: { source_topic: string; target_topic: string; relation_type: string; weight?: number; metadata?: Record<string, unknown> }) {
+  await ensureMemorySchema();
+  const result = await postgres.query(
+    `INSERT INTO rna_topic_relations (source_topic, target_topic, relation_type, weight, metadata)
+     VALUES ($1,$2,$3,$4,$5)
+     RETURNING id, source_topic, target_topic, relation_type, weight, metadata, created_at`,
+    [input.source_topic, input.target_topic, input.relation_type, input.weight ?? 0.5, input.metadata || {}]
+  );
+  return result.rows[0];
+}
+
+export async function listTopicRelations(limit = 100) {
+  await ensureMemorySchema();
+  const result = await postgres.query(
+    `SELECT id, source_topic, target_topic, relation_type, weight, metadata, created_at
+     FROM rna_topic_relations
+     ORDER BY created_at DESC
+     LIMIT $1`,
+    [Math.min(limit, 300)]
+  );
+  return result.rows;
+}
+
+export async function upsertHandoffCard(input: HandoffInput) {
+  await ensureMemorySchema();
+  const result = await postgres.query(
+    `INSERT INTO rna_handoff_cards (agent_id, session_id, topic_id, summary, next_steps, blockers, avoid, metadata)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+     RETURNING id, agent_id, session_id, topic_id, summary, next_steps, blockers, avoid, metadata, created_at, updated_at`,
+    [
+      input.agent_id,
+      input.session_id || null,
+      input.topic_id || null,
+      input.summary,
+      input.next_steps || [],
+      input.blockers || [],
+      input.avoid || [],
+      input.metadata || {},
+    ]
+  );
+  return result.rows[0];
+}
+
+export async function listHandoffCards(limit = 50, agentId?: string) {
+  await ensureMemorySchema();
+  const result = await postgres.query(
+    `SELECT id, agent_id, session_id, topic_id, summary, next_steps, blockers, avoid, metadata, created_at, updated_at
+     FROM rna_handoff_cards
+     WHERE ($1::text IS NULL OR agent_id = $1)
+     ORDER BY created_at DESC
+     LIMIT $2`,
+    [agentId || null, Math.min(limit, 200)]
+  );
+  return result.rows;
 }
 
 export async function queryFacts(filters: FactFilters) {
