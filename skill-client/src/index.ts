@@ -3,6 +3,13 @@ import * as path from 'path';
 import * as os from 'os';
 import crypto from 'crypto';
 
+const STACK_RNA_LOCAL_PATH = '/home/mblair/srv/stacks/rna/.rna';
+
+function resolveRnaLocalPath(fallback = path.join(os.homedir(), '.rna')) {
+  if (process.platform === 'linux' && fs.existsSync('/home/mblair/srv/stacks/rna')) return STACK_RNA_LOCAL_PATH;
+  return fallback;
+}
+
 export interface RNALinkConfig {
   apiKey?: string;
   serverUrl?: string;
@@ -100,7 +107,7 @@ export class RNALink {
   private pairPromise: Promise<void> | null = null;
 
   constructor(config: RNALinkConfig = {}) {
-    this.localPath = config.localPath || path.join(os.homedir(), '.rna');
+    this.localPath = config.localPath || resolveRnaLocalPath();
 
     if (!fs.existsSync(this.localPath)) {
       fs.mkdirSync(this.localPath, { recursive: true });
@@ -227,7 +234,7 @@ export class RNALink {
     });
 
     if (apiResult) return apiResult;
-    return { injection: 'RNA Local Mode: usando cache local ~/.rna/' };
+    return { injection: 'RNA Local Mode: usando cache local /home/mblair/srv/stacks/rna/.rna' };
   }
 
   async query(req: QueryRequest): Promise<Fact[]> {

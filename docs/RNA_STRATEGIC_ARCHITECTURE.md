@@ -106,6 +106,33 @@ Minimum canonical entities:
 - `outbox`: pending projections/sync work.
 - `audit_events`: who read/wrote/changed what.
 
+### Session and topic model
+
+RNA must treat memory as layered context, not as one giant timeline.
+
+- `sessions`:
+  - one operational session per agent run or work block.
+  - contains start/end timestamps, agent id, current objective, and outcome.
+  - can be resumed or superseded, but never silently overwritten.
+- `topics`:
+  - durable threads such as `gateway`, `sia-ui`, `ares-router`, `rna-admin`, `backup-recovery`, `accounting`, `affine`, `luckypixel`.
+  - topics collect facts, traces, tasks, and relationships across sessions.
+- `topic_relations`:
+  - links between topics, e.g. `gateway -> sia`, `rna -> sia`, `ares -> gateway`, `backup-recovery -> rna-admin`.
+  - relations should indicate whether the link is causal, dependency, shared-owner, follow-up, or learned-from.
+- `handoff_cards`:
+  - short agent-to-agent summaries used by the next agent or device.
+  - answer: what changed, what is still broken, what to avoid, what to do next.
+
+The UI should surface these layers separately so an agent can work from:
+
+1. session summary,
+2. topic summary,
+3. related topics,
+4. recent traces,
+5. pending tasks,
+6. and only then the raw facts if needed.
+
 ## Bootstrap Contract
 
 Every agent should start meaningful work with:
@@ -136,6 +163,9 @@ Recommended limits:
 3. Use semantic retrieval only after filtering by agent, space, project, recency, and tags.
 4. Generate daily, project, and per-agent summaries.
 5. Expire or archive transient logs, duplicate facts, and obsolete fixes.
+6. Save token budgets by shipping concise handoff cards and topic summaries before any raw trace dump.
+7. Teach every agent to query RNA first for already-solved infrastructure, auth, proxy, and deployment failures.
+8. Aim for at least 80% token reduction on repeat operational work by reusing session digests, topic memory, and solved-failure patterns.
 
 ## Auth And Trust
 
@@ -165,12 +195,34 @@ Views:
 - Audit Log: who read/wrote/changed memory.
 - Policy Studio: what agents may remember, forget, or execute.
 
+The visual hierarchy should not be a flat list-first admin screen. It should feel closer to Obsidian + a control room:
+
+- a top-level Memory Atlas with graph navigation,
+- a session lane that shows what the current agent is doing,
+- a topic lane that shows durable threads and related work,
+- a handoff lane that explains what the next agent should do,
+- and then drill-down panels for traces, facts, documents, and approvals.
+
 Auth:
 
 - Admin login for Mauricio/SIA.
 - Device tokens for agents.
 - Optional passkeys/OAuth later.
 - Role-based access control from day one.
+
+### Main panel behavior
+
+The main panel should show:
+
+- current session summary for the active agent,
+- active topic,
+- related topics and dependencies,
+- what the last agent already completed,
+- what remains blocked,
+- what must not be repeated,
+- and a compact bootstrap preview for the next agent/device.
+
+The panel is not only a dashboard. It is the continuity layer between agents and devices.
 
 ## Deployment Recommendation
 

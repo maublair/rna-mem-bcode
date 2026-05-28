@@ -134,4 +134,52 @@ router.patch('/docs/:docId', async (req: AuthedRequest, res) => {
   res.json(result.rows[0]);
 });
 
+router.get('/:collectionId/permissions', async (req, res) => {
+  await ensureMemorySchema();
+  const result = await postgres.query(
+    `SELECT id, collection_id, subject_type, subject_id, permissions, created_at
+     FROM rna_collection_permissions
+     WHERE collection_id = $1
+     ORDER BY created_at DESC`,
+    [req.params.collectionId]
+  );
+  res.json(result.rows);
+});
+
+router.post('/:collectionId/permissions', async (req: AuthedRequest, res) => {
+  await ensureMemorySchema();
+  const subjectType = String(req.body?.subject_type || '').trim();
+  const subjectId = String(req.body?.subject_id || '').trim();
+  if (!subjectType || !subjectId) {
+    return res.status(400).json({ error: 'missing_subject' });
+  }
+
+  const result = await postgres.query(
+    `INSERT INTO rna_collection_permissions (collection_id, subject_type, subject_id, permissions)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (collection_id, subject_type, subject_id)
+     DO UPDATE SET permissions = EXCLUDED.permissions
+     RETURNING id, collection_id, subject_type, subject_id, permissions, created_at`,
+    [
+      req.params.collectionId,
+      subjectType,
+      subjectId,
+      Array.isArray(req.body?.permissions) ? req.body.permissions.map(String) : [],
+    ]
+  );
+  res.status(201).json(result.rows[0]);
+});
+
+router.get('/docs/:docId/revisions', async (req, res) => {
+  await ensureMemorySchema();
+  const result = await postgres.query(
+    `SELECT id, document_id, version, data, content, changed_by, change_reason, created_at
+     FROM rna_document_revisions
+     WHERE document_id = $1
+     ORDER BY created_at DESC`,
+    [req.params.docId]
+  );
+  res.json(result.rows);
+});
+
 export default router;

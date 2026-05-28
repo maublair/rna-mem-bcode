@@ -33,8 +33,8 @@ curl http://127.0.0.1:3007/health
 ## `rna-mem-link` para todos los agentes
 El cliente está en `skill-client` (`@rna/mem-link`) y usa prioridad de configuración:
 1. variables de entorno (`RNA_API_KEY`, `RNA_SERVER_URL`)
-2. `~/.rna/config.json`
-3. fallback local (`~/.rna`)
+2. `/home/mblair/srv/stacks/rna/.rna/config.json`
+3. fallback local (`/home/mblair/srv/stacks/rna/.rna`)
 
 Config base recomendada en cada dispositivo:
 ```json
@@ -46,6 +46,45 @@ Config base recomendada en cada dispositivo:
   "offline_mode": false
 }
 ```
+
+## Regla operativa
+
+- El mirror local canónico es `/home/mblair/srv/stacks/rna/.rna`.
+- `~/.rna` solo queda como compatibilidad heredada.
+- Los agentes que trabajen en SIA, Ares, RNA o infraestructura deben registrar aprendizaje durable en RNA después de resolver un incidente relevante.
+- RNA no es un almacén de secretos: solo aprendizaje, estado operativo, tareas y continuidad.
+- RNA debe organizar la información por sesiones, temas y relaciones entre temas.
+- Cada agente debe dejar un handoff corto para el siguiente agente o dispositivo.
+- El objetivo operativo es ahorrar al menos 80% de tokens en problemas repetidos mediante reutilización de sesiones resumidas, temas relacionados y soluciones ya conocidas.
+- La interfaz principal debe priorizar una vista tipo `Memory Atlas` con grafo, sesiones, temas relacionados, y resumen de continuidad antes que listas planas.
+
+## Frontend operativo
+
+El frontend ya funciona como consola de operaciones base, no solo como visor:
+
+- `/dashboard`: vista principal con modo `wiki` y `graph`.
+- `/spaces`: mapa del memory palace.
+- `/search`: búsqueda unificada de infraestructura.
+- `/sync`: monitor de sync, permisos y revisiones.
+- `/backups`: snapshot health, restore points y restore rehearsal jobs.
+- `/settings`: controles de consola y gobernanza.
+- `/admin`: métricas y panel de control.
+
+La vista `/spaces` ya permite:
+
+- listar espacios, colecciones y facts
+- crear colecciones
+- crear documentos dentro de una colección seleccionada
+- inspeccionar documentos reales de la colección
+- revisar permisos de colección y revisiones de documentos
+- asignar permisos por agente/dispositivo/rol desde la vista de sync
+- ver y gestionar cola offline/sync pendiente desde la vista de sync
+- revisar salud de snapshots, lanzar snapshot manual y ejecutar restore rehearsals desde la vista de backups
+- registrar health snapshots de RNA y ver la última ejecución manual desde la consola
+- ver estado del hook `SIA_BACKUP_HOOK` y probarlo de forma controlada desde `/backups`
+- habilitar `RNA_RESTORE_EXECUTOR` para los restores `apply` desde el backend, o usar el executor por defecto `scripts/rna-restore.sh`
+
+La visión extendida sigue en `docs/RNA_STRATEGIC_ARCHITECTURE.md` y `docs/COLLECTIONS_AND_MEMORY_PALACE.md`.
 
 ## Componentes
 - `backend/`: API Node/Express/TypeScript.

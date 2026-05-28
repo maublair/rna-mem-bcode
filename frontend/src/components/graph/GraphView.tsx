@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useEffect, useState } from 'react';
 import {
   ReactFlow,
   Node,
@@ -81,7 +81,7 @@ export function GraphView({ graph, isLoading, onSelectEntity }: GraphViewProps) 
     [onSelectEntity]
   );
 
-  useMemo(() => {
+  useEffect(() => {
     setNodes(rfNodes);
     setEdges(rfEdges);
   }, [rfNodes, rfEdges]);

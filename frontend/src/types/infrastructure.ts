@@ -85,3 +85,149 @@ export interface HealthResponse {
   status: string;
   services: Record<string, string>;
 }
+
+export interface SpaceSummary {
+  id: string;
+  name: string;
+  path: string;
+}
+
+export interface CollectionSummary {
+  id: string;
+  space_id: string | null;
+  name: string;
+  schema_version?: string | null;
+  visibility: string;
+  owner_type: string;
+  owner_id?: string | null;
+  policy?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentSummary {
+  id: string;
+  collection_id: string;
+  path?: string | null;
+  type: string;
+  title?: string | null;
+  content?: string | null;
+  data?: Record<string, unknown>;
+  tags?: string[];
+  created_by?: string | null;
+  updated_by?: string | null;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FactSummary {
+  id: string;
+  space_id: string;
+  content: string;
+  type: string;
+  tags: string[];
+  source_agent?: string | null;
+  source_device?: string | null;
+  metadata?: Record<string, unknown>;
+  projection_status?: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface TraceEntry {
+  id: string;
+  agent_id: string;
+  device_id?: string | null;
+  session_id?: string | null;
+  cwd?: string | null;
+  command: string;
+  status: string;
+  result_summary?: string | null;
+  stdout_ref?: string | null;
+  stderr_ref?: string | null;
+  error_message?: string | null;
+  duration_ms?: number | null;
+  metadata?: Record<string, unknown>;
+  previous_hash?: string | null;
+  entry_hash: string;
+  created_at: string;
+}
+
+export interface CollectionPermission {
+  id: string;
+  collection_id: string;
+  subject_type: string;
+  subject_id: string;
+  permissions: string[];
+  created_at: string;
+}
+
+export interface DocumentRevision {
+  id: string;
+  document_id: string;
+  version: number;
+  data?: Record<string, unknown>;
+  content?: string | null;
+  changed_by?: string | null;
+  change_reason?: string | null;
+  created_at: string;
+}
+
+export interface SyncOutboxEntry {
+  id: string;
+  source_device?: string | null;
+  source_agent?: string | null;
+  target_space?: string | null;
+  target_collection?: string | null;
+  payload: Record<string, unknown>;
+  status: string;
+  retry_count: number;
+  last_error?: string | null;
+  scheduled_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  processed_at?: string | null;
+}
+
+export interface SnapshotHealth {
+  id: string;
+  kind: string;
+  status: string;
+  location?: string | null;
+  size_bytes?: number | null;
+  details?: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface SiaBackupHookStatus {
+  configured: boolean;
+  hook_path: string | null;
+  exists: boolean;
+  executable: boolean;
+}
+
+export interface RestorePlan {
+  order: string[];
+  rule: string[];
+  latest_snapshots: SnapshotHealth[];
+}
+
+export interface RestoreJob {
+  id: string;
+  mode: string;
+  target_snapshot_id?: string | null;
+  target_snapshot_kind?: string | null;
+  target_location?: string | null;
+  status: string;
+  current_step?: string | null;
+  step_index: number;
+  total_steps: number;
+  last_error?: string | null;
+  summary?: Record<string, unknown>;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+}

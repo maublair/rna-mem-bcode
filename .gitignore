@@ -3,3 +3,4 @@ dist/
 .env
 backend/node_modules/
 skill-client/node_modules/
+.rna/

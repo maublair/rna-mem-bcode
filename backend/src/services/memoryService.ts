@@ -37,6 +37,14 @@ export interface BitacoraInput {
   metadata?: any;
 }
 
+export interface SnapshotHealthInput {
+  kind: string;
+  status: string;
+  location?: string;
+  sizeBytes?: number;
+  details?: any;
+}
+
 let schemaReady = false;
 let schemaPromise: Promise<void> | null = null;
 
@@ -140,6 +148,59 @@ async function ensureMemorySchemaInternal() {
       UNIQUE(collection_id, subject_type, subject_id)
     )
   `);
+  await postgres.query(`
+    CREATE TABLE IF NOT EXISTS rna_sync_outbox (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      source_device TEXT,
+      source_agent TEXT,
+      target_space TEXT,
+      target_collection TEXT,
+      payload JSONB NOT NULL DEFAULT '{}'::JSONB,
+      status TEXT NOT NULL DEFAULT 'pending',
+      retry_count INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
+      scheduled_at TIMESTAMPTZ DEFAULT now(),
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now(),
+      processed_at TIMESTAMPTZ
+    )
+  `);
+  await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_sync_outbox_status_scheduled ON rna_sync_outbox(status, scheduled_at ASC)`);
+  await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_sync_outbox_created ON rna_sync_outbox(created_at DESC)`);
+  await postgres.query(`
+    CREATE TABLE IF NOT EXISTS rna_snapshot_health (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      kind TEXT NOT NULL,
+      status TEXT NOT NULL,
+      location TEXT,
+      size_bytes BIGINT,
+      details JSONB DEFAULT '{}'::JSONB,
+      created_at TIMESTAMPTZ DEFAULT now()
+    )
+  `);
+  await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_snapshot_health_kind_created ON rna_snapshot_health(kind, created_at DESC)`);
+  await postgres.query(`
+    CREATE TABLE IF NOT EXISTS rna_restore_jobs (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      mode TEXT NOT NULL DEFAULT 'dry-run',
+      target_snapshot_id TEXT,
+      target_snapshot_kind TEXT,
+      target_location TEXT,
+      status TEXT NOT NULL DEFAULT 'planned',
+      current_step TEXT,
+      step_index INTEGER NOT NULL DEFAULT 0,
+      total_steps INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
+      summary JSONB DEFAULT '{}'::JSONB,
+      created_by TEXT,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now(),
+      started_at TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ
+    )
+  `);
+  await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_restore_jobs_created ON rna_restore_jobs(created_at DESC)`);
+  await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_restore_jobs_status ON rna_restore_jobs(status)`);
   await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_collections_space ON rna_collections(space_id)`);
   await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_documents_collection_updated ON rna_documents(collection_id, updated_at DESC)`);
   await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_documents_type ON rna_documents(type)`);
