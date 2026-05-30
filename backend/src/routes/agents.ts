@@ -23,12 +23,35 @@ function normalizeAgent(agentId: unknown) {
   return value || 'unknown';
 }
 
-async function storeOperationalFact(input: { content: string; type: string; tags: string[] }) {
+function buildOrigin(req: AuthedRequest, agentId: string) {
+  return {
+    source_agent: agentId,
+    source_device: req.device?.deviceId || null,
+    source_runtime: String(req.body?.source_runtime || req.body?.runtime || req.headers['user-agent'] || 'unknown'),
+    source_workspace: String(req.body?.source_workspace || req.body?.workspace || 'rna-console'),
+  };
+}
+
+async function storeOperationalFact(input: {
+  content: string;
+  type: string;
+  tags: string[];
+  sourceAgent?: string;
+  sourceDevice?: string | null;
+  sourceRuntime?: string | null;
+  sourceWorkspace?: string | null;
+  metadata?: Record<string, unknown>;
+}) {
   const fact = await storeFact({
     spaceId: 'operacional',
     content: input.content,
     type: input.type,
     tags: input.tags,
+    sourceAgent: input.sourceAgent,
+    sourceDevice: input.sourceDevice || undefined,
+    sourceRuntime: input.sourceRuntime || undefined,
+    sourceWorkspace: input.sourceWorkspace || undefined,
+    metadata: input.metadata || {},
   });
   return { id: fact.id, status: 'created', fact };
 }
@@ -84,7 +107,7 @@ router.post('/session', async (req: AuthedRequest, res) => {
       summary: req.body?.summary ? String(req.body.summary) : null,
       started_at: req.body?.started_at ? String(req.body.started_at) : undefined,
       ended_at: req.body?.ended_at ? String(req.body.ended_at) : undefined,
-      metadata: req.body?.metadata || {},
+      metadata: { ...(req.body?.metadata || {}), origin: buildOrigin(req, agentId) },
     });
     res.status(201).json(session);
   } catch (error: any) {
@@ -106,7 +129,7 @@ router.post('/session/:sessionId/close', async (req: AuthedRequest, res) => {
       summary: req.body?.summary ? String(req.body.summary) : null,
       started_at: req.body?.started_at ? String(req.body.started_at) : undefined,
       ended_at: req.body?.ended_at ? String(req.body.ended_at) : new Date().toISOString(),
-      metadata: req.body?.metadata || {},
+      metadata: { ...(req.body?.metadata || {}), origin: buildOrigin(req, agentId) },
     });
     res.json(session);
   } catch (error: any) {
@@ -137,7 +160,7 @@ router.post('/topics', async (req: AuthedRequest, res) => {
         tags: Array.isArray(req.body?.tags) ? req.body.tags.map(String) : [],
         session_id: req.body?.session_id ? String(req.body.session_id) : null,
         related_topics: Array.isArray(req.body?.related_topics) ? req.body.related_topics.map(String) : [],
-        metadata: req.body?.metadata || {},
+        metadata: { ...(req.body?.metadata || {}), origin: buildOrigin(req, normalizeAgent(req.body?.agent_id || req.device?.deviceName)) },
       })
     );
   } catch (error: any) {
@@ -167,7 +190,7 @@ router.post('/topics/relations', async (req: AuthedRequest, res) => {
         target_topic: targetTopic,
         relation_type: relationType,
         weight: Number(req.body?.weight || 0.5),
-        metadata: req.body?.metadata || {},
+        metadata: { ...(req.body?.metadata || {}), origin: buildOrigin(req, normalizeAgent(req.body?.agent_id || req.device?.deviceName)) },
       })
     );
   } catch (error: any) {
@@ -199,12 +222,89 @@ router.post('/handoff', async (req: AuthedRequest, res) => {
         next_steps: Array.isArray(req.body?.next_steps) ? req.body.next_steps.map(String) : [],
         blockers: Array.isArray(req.body?.blockers) ? req.body.blockers.map(String) : [],
         avoid: Array.isArray(req.body?.avoid) ? req.body.avoid.map(String) : [],
-        metadata: req.body?.metadata || {},
+        metadata: { ...(req.body?.metadata || {}), origin: buildOrigin(req, agentId) },
       })
     );
   } catch (error: any) {
     console.error('Handoff upsert failed:', error);
     res.status(500).json({ error: 'handoff_upsert_failed', detail: error.message });
+  }
+});
+
+
+router.get('/messages', async (req: AuthedRequest, res) => {
+  try {
+    const limit = Math.min(Number(req.query.limit || 50), 200);
+    const toAgent = req.query.to_agent ? normalizeAgent(req.query.to_agent) : undefined;
+    const facts = await queryFacts({ spaceId: 'public/messages', limit });
+    const messages = facts
+      .filter((fact: any) => fact.type === 'message')
+      .filter((fact: any) => {
+        if (!toAgent) return true;
+        const target = String(fact.metadata?.to_agent || fact.metadata?.toAgent || '').toLowerCase();
+        return target === toAgent || target === 'all';
+      })
+      .map((fact: any) => ({
+        id: fact.id,
+        from_agent: String(fact.metadata?.from_agent || fact.source_agent || 'unknown'),
+        to_agent: String(fact.metadata?.to_agent || 'all'),
+        channel: String(fact.metadata?.channel || 'public'),
+        content: fact.content,
+        tags: Array.isArray(fact.tags) ? fact.tags : [],
+        metadata: fact.metadata || {},
+        source_device: fact.source_device || null,
+        source_agent: fact.source_agent || null,
+        source_runtime: fact.source_runtime || null,
+        source_workspace: fact.source_workspace || null,
+        status: String(fact.metadata?.status || 'synced'),
+        created_at: fact.created_at,
+        updated_at: fact.created_at,
+      }));
+    res.json(messages);
+  } catch (error: any) {
+    console.error('Message list failed:', error);
+    res.status(500).json({ error: 'message_list_failed', detail: error.message });
+  }
+});
+
+router.post('/messages', async (req: AuthedRequest, res) => {
+  const fromAgent = normalizeAgent(req.body?.from_agent || req.body?.agent_id || req.device?.deviceName);
+  const toAgent = String(req.body?.to_agent || 'all').trim().toLowerCase();
+  const content = String(req.body?.content || req.body?.message || '').trim();
+  if (!content) return res.status(400).json({ error: 'missing_content' });
+  try {
+    const result = await storeOperationalFact({
+      content,
+      type: 'message',
+      tags: ['message', `from:${fromAgent}`, `to:${toAgent}`, `channel:${String(req.body?.channel || 'public')}`],
+      sourceAgent: fromAgent,
+      sourceDevice: req.device?.deviceId || null,
+      sourceRuntime: String(req.body?.source_runtime || req.body?.runtime || req.headers['user-agent'] || 'unknown'),
+      sourceWorkspace: String(req.body?.source_workspace || req.body?.workspace || 'rna-console'),
+      metadata: {
+        ...(req.body?.metadata || {}),
+        status: 'synced',
+        from_agent: fromAgent,
+        to_agent: toAgent,
+        channel: String(req.body?.channel || 'public'),
+        origin: buildOrigin(req, fromAgent),
+      },
+    });
+    const payload = {
+      ...result,
+      message: {
+        from_agent: fromAgent,
+        to_agent: toAgent,
+        channel: String(req.body?.channel || 'public'),
+        content,
+        tags: Array.isArray(req.body?.tags) ? req.body.tags.map(String) : [],
+        metadata: result.fact.metadata || {},
+      },
+    };
+    res.status(201).json(payload);
+  } catch (error: any) {
+    console.error('Message create failed:', error);
+    res.status(500).json({ error: 'message_create_failed', detail: error.message });
   }
 });
 
@@ -246,7 +346,7 @@ router.post('/trace', async (req: AuthedRequest, res) => {
       stderrRef: req.body?.stderr_ref ? String(req.body.stderr_ref) : undefined,
       errorMessage: req.body?.error_message ? String(req.body.error_message) : undefined,
       durationMs: req.body?.duration_ms ? Number(req.body.duration_ms) : undefined,
-      metadata: req.body?.metadata || {},
+      metadata: { ...(req.body?.metadata || {}), origin: buildOrigin(req, agentId) },
     });
     res.status(201).json(entry);
   } catch (error: any) {

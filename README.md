@@ -36,6 +36,12 @@ El cliente está en `skill-client` (`@rna/mem-link`) y usa prioridad de configur
 2. `/home/mblair/srv/stacks/rna/.rna/config.json`
 3. fallback local (`/home/mblair/srv/stacks/rna/.rna`)
 
+## Autenticación de sync
+- `auth_token` es el token real de dispositivo emitido por `/auth/pair`.
+- `api_key` solo debe usarse como compatibilidad heredada cuando contenga el mismo token de sesión del dispositivo.
+- `pairing_secret` se usa para emitir o renovar la sesión de dispositivo.
+- Los tokens de proveedor de Ares no sirven para autenticarse contra RNA.
+
 Config base recomendada en cada dispositivo:
 ```json
 {

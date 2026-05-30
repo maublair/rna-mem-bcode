@@ -56,7 +56,7 @@ export function SearchPage() {
           className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 placeholder:text-slate-500 focus:border-cyan-500 focus:outline-none shadow-inner shadow-black/20"
         />
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div className="space-y-4">
           {hits.map((hit) => (
             <article key={`${hit.kind}:${hit.id}`} className="rounded-2xl border border-white/10 bg-slate-950/65 p-4 shadow-lg shadow-black/20">
               <div className="flex items-center justify-between gap-4">

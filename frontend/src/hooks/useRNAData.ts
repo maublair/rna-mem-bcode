@@ -15,6 +15,11 @@ export const RNA_QUERY_KEYS = {
   restoreJobs: ['rna', 'restore-jobs'] as const,
   siaBackupHook: ['rna', 'sia-backup-hook'] as const,
   trace: (filters?: object) => ['rna', 'trace', filters] as const,
+  sessions: (filters?: object) => ['rna', 'sessions', filters] as const,
+  topics: (filters?: object) => ['rna', 'topics', filters] as const,
+  topicRelations: (filters?: object) => ['rna', 'topic-relations', filters] as const,
+  handoff: (filters?: object) => ['rna', 'handoff', filters] as const,
+  messages: (filters?: object) => ['rna', 'messages', filters] as const,
 };
 
 export function useSpacesData() {
@@ -112,6 +117,46 @@ export function useTraceData(filters?: { agent_id?: string; limit?: number }) {
   return useQuery({
     queryKey: RNA_QUERY_KEYS.trace(filters),
     queryFn: () => api.getAgentTrace(filters),
+    staleTime: 10 * 1000,
+  });
+}
+
+export function useSessionsData(filters?: { agent_id?: string; limit?: number }) {
+  return useQuery({
+    queryKey: RNA_QUERY_KEYS.sessions(filters),
+    queryFn: () => api.getAgentSessions(filters),
+    staleTime: 10 * 1000,
+  });
+}
+
+export function useTopicsData(filters?: { limit?: number }) {
+  return useQuery({
+    queryKey: RNA_QUERY_KEYS.topics(filters),
+    queryFn: () => api.getAgentTopics(filters),
+    staleTime: 10 * 1000,
+  });
+}
+
+export function useTopicRelationsData(filters?: { limit?: number }) {
+  return useQuery({
+    queryKey: RNA_QUERY_KEYS.topicRelations(filters),
+    queryFn: () => api.getTopicRelations(filters),
+    staleTime: 10 * 1000,
+  });
+}
+
+export function useHandoffCardsData(filters?: { agent_id?: string; limit?: number }) {
+  return useQuery({
+    queryKey: RNA_QUERY_KEYS.handoff(filters),
+    queryFn: () => api.getHandoffCards(filters),
+    staleTime: 10 * 1000,
+  });
+}
+
+export function useAgentMessagesData(filters?: { to_agent?: string; limit?: number }) {
+  return useQuery({
+    queryKey: RNA_QUERY_KEYS.messages(filters),
+    queryFn: () => api.getAgentMessages(filters),
     staleTime: 10 * 1000,
   });
 }

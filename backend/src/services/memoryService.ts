@@ -11,6 +11,8 @@ export interface FactInput {
   tags?: string[];
   sourceAgent?: string;
   sourceDevice?: string;
+  sourceRuntime?: string;
+  sourceWorkspace?: string;
   metadata?: any;
 }
 
@@ -116,6 +118,59 @@ export interface HandoffInput {
   blockers?: string[];
   avoid?: string[];
   metadata?: Record<string, unknown>;
+}
+
+export interface SyncOutboxInput {
+  source_device?: string | null;
+  source_agent?: string | null;
+  source_runtime?: string | null;
+  source_workspace?: string | null;
+  target_space?: string | null;
+  target_collection?: string | null;
+  payload?: Record<string, unknown>;
+  status?: string;
+  retry_count?: number;
+  last_error?: string | null;
+  scheduled_at?: string | null;
+}
+
+export interface ProjectInput {
+  project_id: string;
+  space_id?: string | null;
+  title: string;
+  objective?: string | null;
+  status?: string | null;
+  priority?: string | null;
+  owner_agent?: string | null;
+  current_session_id?: string | null;
+  active_topics?: string[];
+  parallel_tracks?: string[];
+  handoff_card?: string | null;
+  relations?: unknown[];
+  artifacts?: unknown[];
+  milestones?: string[];
+  risks?: string[];
+  decisions?: string[];
+  open_questions?: string[];
+  brainstorming?: string[];
+  constraints?: string[];
+  version?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ProjectFileInput {
+  project_id: string;
+  filename: string;
+  mime_type?: string | null;
+  size_bytes?: number | null;
+  content?: string | null;
+  summary?: string | null;
+  tags?: string[];
+  metadata?: Record<string, unknown>;
+  source_agent?: string | null;
+  source_device?: string | null;
+  source_runtime?: string | null;
+  source_workspace?: string | null;
 }
 
 let schemaReady = false;
@@ -226,6 +281,8 @@ async function ensureMemorySchemaInternal() {
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       source_device TEXT,
       source_agent TEXT,
+      source_runtime TEXT,
+      source_workspace TEXT,
       target_space TEXT,
       target_collection TEXT,
       payload JSONB NOT NULL DEFAULT '{}'::JSONB,
@@ -240,6 +297,8 @@ async function ensureMemorySchemaInternal() {
   `);
   await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_sync_outbox_status_scheduled ON rna_sync_outbox(status, scheduled_at ASC)`);
   await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_sync_outbox_created ON rna_sync_outbox(created_at DESC)`);
+  await postgres.query(`ALTER TABLE rna_sync_outbox ADD COLUMN IF NOT EXISTS source_runtime TEXT`);
+  await postgres.query(`ALTER TABLE rna_sync_outbox ADD COLUMN IF NOT EXISTS source_workspace TEXT`);
   await postgres.query(`
     CREATE TABLE IF NOT EXISTS rna_snapshot_health (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -329,6 +388,54 @@ async function ensureMemorySchemaInternal() {
       updated_at TIMESTAMPTZ DEFAULT now()
     )
   `);
+  await postgres.query(`
+    CREATE TABLE IF NOT EXISTS rna_projects (
+      project_id TEXT PRIMARY KEY,
+      space_id TEXT REFERENCES rna_spaces(id) ON DELETE SET NULL,
+      title TEXT NOT NULL,
+      objective TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      priority TEXT,
+      owner_agent TEXT,
+      current_session_id TEXT,
+      active_topics TEXT[] DEFAULT ARRAY[]::TEXT[],
+      parallel_tracks TEXT[] DEFAULT ARRAY[]::TEXT[],
+      handoff_card TEXT,
+      relations JSONB DEFAULT '[]'::JSONB,
+      artifacts JSONB DEFAULT '[]'::JSONB,
+      milestones TEXT[] DEFAULT ARRAY[]::TEXT[],
+      risks TEXT[] DEFAULT ARRAY[]::TEXT[],
+      decisions TEXT[] DEFAULT ARRAY[]::TEXT[],
+      open_questions TEXT[] DEFAULT ARRAY[]::TEXT[],
+      brainstorming TEXT[] DEFAULT ARRAY[]::TEXT[],
+      constraints TEXT[] DEFAULT ARRAY[]::TEXT[],
+      version TEXT,
+      metadata JSONB DEFAULT '{}'::JSONB,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now()
+    )
+  `);
+  await postgres.query(`
+    CREATE TABLE IF NOT EXISTS rna_project_files (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_id TEXT NOT NULL REFERENCES rna_projects(project_id) ON DELETE CASCADE,
+      filename TEXT NOT NULL,
+      mime_type TEXT,
+      size_bytes BIGINT,
+      content TEXT,
+      summary TEXT,
+      tags TEXT[] DEFAULT ARRAY[]::TEXT[],
+      metadata JSONB DEFAULT '{}'::JSONB,
+      source_agent TEXT,
+      source_device TEXT,
+      source_runtime TEXT,
+      source_workspace TEXT,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now()
+    )
+  `);
+  await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_projects_status_updated ON rna_projects(status, updated_at DESC)`);
+  await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_project_files_project_created ON rna_project_files(project_id, created_at DESC)`);
   await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_sessions_agent_created ON rna_sessions(agent_id, created_at DESC)`);
   await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_topics_created ON rna_topics(created_at DESC)`);
   await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_topic_relations_source_target ON rna_topic_relations(source_topic, target_topic)`);
@@ -359,6 +466,8 @@ async function ensureMemorySchemaInternal() {
   `);
   await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_agent_bitacora_agent_created ON rna_agent_bitacora(agent_id, created_at DESC)`);
   await postgres.query(`CREATE INDEX IF NOT EXISTS idx_rna_agent_bitacora_status ON rna_agent_bitacora(status)`);
+  await postgres.query(`ALTER TABLE rna_facts ADD COLUMN IF NOT EXISTS source_runtime TEXT`);
+  await postgres.query(`ALTER TABLE rna_facts ADD COLUMN IF NOT EXISTS source_workspace TEXT`);
   await postgres.query(`
     CREATE OR REPLACE FUNCTION prevent_rna_agent_bitacora_mutation()
     RETURNS trigger AS $$
@@ -396,9 +505,9 @@ export async function storeFact(input: FactInput) {
   );
 
   const result = await postgres.query(
-    `INSERT INTO rna_facts (space_id, content, type, tags, source_agent, source_device, metadata)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
-     RETURNING id, space_id, content, type, tags, source_agent, source_device, metadata, projection_status, created_at`,
+    `INSERT INTO rna_facts (space_id, content, type, tags, source_agent, source_device, source_runtime, source_workspace, metadata)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     RETURNING id, space_id, content, type, tags, source_agent, source_device, source_runtime, source_workspace, metadata, projection_status, created_at`,
     [
       spaceId,
       input.content,
@@ -406,12 +515,65 @@ export async function storeFact(input: FactInput) {
       input.tags || [],
       input.sourceAgent || null,
       input.sourceDevice || null,
+      input.sourceRuntime || null,
+      input.sourceWorkspace || null,
       input.metadata || {},
     ]
   );
   const fact = result.rows[0];
   void projectFact(fact);
   return fact;
+}
+
+export async function upsertSyncOutbox(input: SyncOutboxInput) {
+  await ensureMemorySchema();
+  const result = await postgres.query(
+    `INSERT INTO rna_sync_outbox (source_device, source_agent, source_runtime, source_workspace, target_space, target_collection, payload, status, retry_count, last_error, scheduled_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,COALESCE($11, now()))
+     RETURNING id, source_device, source_agent, source_runtime, source_workspace, target_space, target_collection, payload, status, retry_count, last_error, scheduled_at, created_at, updated_at, processed_at`,
+    [
+      input.source_device ?? null,
+      input.source_agent ?? null,
+      input.source_runtime ?? null,
+      input.source_workspace ?? null,
+      input.target_space ?? null,
+      input.target_collection ?? null,
+      input.payload || {},
+      input.status || 'pending',
+      input.retry_count ?? 0,
+      input.last_error ?? null,
+      input.scheduled_at ?? null,
+    ]
+  );
+  return result.rows[0];
+}
+
+export async function listSyncOutbox(limit = 100) {
+  await ensureMemorySchema();
+  const result = await postgres.query(
+    `SELECT id, source_device, source_agent, source_runtime, source_workspace, target_space, target_collection, payload, status, retry_count, last_error, scheduled_at, created_at, updated_at, processed_at
+     FROM rna_sync_outbox
+     ORDER BY created_at DESC
+     LIMIT $1`,
+    [Math.min(limit, 500)]
+  );
+  return result.rows;
+}
+
+export async function updateSyncOutbox(id: string, input: { status: string; retry_count?: number | null; last_error?: string | null }) {
+  await ensureMemorySchema();
+  const result = await postgres.query(
+    `UPDATE rna_sync_outbox
+     SET status = $2,
+         retry_count = COALESCE($3, retry_count),
+         last_error = COALESCE($4, last_error),
+         processed_at = CASE WHEN $2 = 'done' THEN now() ELSE processed_at END,
+         updated_at = now()
+     WHERE id = $1
+     RETURNING id, source_device, source_agent, source_runtime, source_workspace, target_space, target_collection, payload, status, retry_count, last_error, scheduled_at, created_at, updated_at, processed_at`,
+    [id, input.status, input.retry_count ?? null, input.last_error ?? null]
+  );
+  return result.rows[0] ?? null;
 }
 
 export async function upsertSession(input: SessionInput) {
@@ -553,6 +715,122 @@ export async function listHandoffCards(limit = 50, agentId?: string) {
   return result.rows;
 }
 
+export async function listProjects(limit = 100) {
+  await ensureMemorySchema();
+  const result = await postgres.query(
+    `SELECT project_id, space_id, title, objective, status, priority, owner_agent, current_session_id, active_topics, parallel_tracks, handoff_card, relations, artifacts, milestones, risks, decisions, open_questions, brainstorming, constraints, version, metadata, created_at, updated_at
+     FROM rna_projects
+     ORDER BY updated_at DESC
+     LIMIT $1`,
+    [Math.min(limit, 500)]
+  );
+  return result.rows;
+}
+
+export async function upsertProject(input: ProjectInput) {
+  await ensureMemorySchema();
+  const result = await postgres.query(
+    `INSERT INTO rna_projects (project_id, space_id, title, objective, status, priority, owner_agent, current_session_id, active_topics, parallel_tracks, handoff_card, relations, artifacts, milestones, risks, decisions, open_questions, brainstorming, constraints, version, metadata)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+     ON CONFLICT (project_id)
+     DO UPDATE SET
+       space_id = EXCLUDED.space_id,
+       title = EXCLUDED.title,
+       objective = EXCLUDED.objective,
+       status = EXCLUDED.status,
+       priority = EXCLUDED.priority,
+       owner_agent = EXCLUDED.owner_agent,
+       current_session_id = EXCLUDED.current_session_id,
+       active_topics = EXCLUDED.active_topics,
+       parallel_tracks = EXCLUDED.parallel_tracks,
+       handoff_card = EXCLUDED.handoff_card,
+       relations = EXCLUDED.relations,
+       artifacts = EXCLUDED.artifacts,
+       milestones = EXCLUDED.milestones,
+       risks = EXCLUDED.risks,
+       decisions = EXCLUDED.decisions,
+       open_questions = EXCLUDED.open_questions,
+       brainstorming = EXCLUDED.brainstorming,
+       constraints = EXCLUDED.constraints,
+       version = EXCLUDED.version,
+       metadata = EXCLUDED.metadata,
+       updated_at = now()
+     RETURNING project_id, space_id, title, objective, status, priority, owner_agent, current_session_id, active_topics, parallel_tracks, handoff_card, relations, artifacts, milestones, risks, decisions, open_questions, brainstorming, constraints, version, metadata, created_at, updated_at`,
+    [
+      input.project_id,
+      input.space_id || null,
+      input.title,
+      input.objective || null,
+      input.status || 'active',
+      input.priority || null,
+      input.owner_agent || null,
+      input.current_session_id || null,
+      input.active_topics || [],
+      input.parallel_tracks || [],
+      input.handoff_card || null,
+      input.relations || [],
+      input.artifacts || [],
+      input.milestones || [],
+      input.risks || [],
+      input.decisions || [],
+      input.open_questions || [],
+      input.brainstorming || [],
+      input.constraints || [],
+      input.version || null,
+      input.metadata || {},
+    ]
+  );
+  return result.rows[0];
+}
+
+export async function listProjectFiles(projectId: string, limit = 200) {
+  await ensureMemorySchema();
+  const result = await postgres.query(
+    `SELECT id, project_id, filename, mime_type, size_bytes, content, summary, tags, metadata, source_agent, source_device, source_runtime, source_workspace, created_at, updated_at
+     FROM rna_project_files
+     WHERE project_id = $1
+     ORDER BY created_at DESC
+     LIMIT $2`,
+    [projectId, Math.min(limit, 500)]
+  );
+  return result.rows;
+}
+
+function deriveProjectFileSummary(input: ProjectFileInput) {
+  const summary = String(input.summary || '').trim();
+  if (summary) return summary;
+  const content = String(input.content || '').trim();
+  if (!content) return 'Archivo sin contenido textual';
+  const lineCount = content.split(/\r?\n/).filter(Boolean).length;
+  const excerpt = content.replace(/\s+/g, ' ').slice(0, 280);
+  return `${excerpt}${content.length > 280 ? '…' : ''} · ${content.length} chars · ${lineCount} lines`;
+}
+
+export async function upsertProjectFile(input: ProjectFileInput) {
+  await ensureMemorySchema();
+  const summary = deriveProjectFileSummary(input);
+  const result = await postgres.query(
+    `INSERT INTO rna_project_files (project_id, filename, mime_type, size_bytes, content, summary, tags, metadata, source_agent, source_device, source_runtime, source_workspace)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+     RETURNING id, project_id, filename, mime_type, size_bytes, content, summary, tags, metadata, source_agent, source_device, source_runtime, source_workspace, created_at, updated_at`,
+    [
+      input.project_id,
+      input.filename,
+      input.mime_type || null,
+      input.size_bytes ?? null,
+      input.content || null,
+      summary,
+      input.tags || [],
+      input.metadata || {},
+      input.source_agent || null,
+      input.source_device || null,
+      input.source_runtime || null,
+      input.source_workspace || null,
+    ]
+  );
+  return result.rows[0];
+}
+
 export async function queryFacts(filters: FactFilters) {
   await ensureMemorySchema();
   const clauses = ['1 = 1'];
@@ -577,7 +855,7 @@ export async function queryFacts(filters: FactFilters) {
 
   values.push(Math.min(filters.limit || 50, 200));
   const result = await postgres.query(
-    `SELECT id, space_id, content, type, tags, source_agent, source_device, metadata, projection_status, created_at
+    `SELECT id, space_id, content, type, tags, source_agent, source_device, source_runtime, source_workspace, metadata, projection_status, created_at
      FROM rna_facts
      WHERE ${clauses.join(' AND ')}
      ORDER BY created_at DESC

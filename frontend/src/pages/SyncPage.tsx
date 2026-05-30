@@ -13,6 +13,7 @@ import {
 import { useCreateCollectionPermission } from '../hooks/useRNAPermissions';
 import { useCreateSyncPending, useUpdateSyncPending } from '../hooks/useSyncMutations';
 import type { CollectionSummary, DocumentRevision, FactSummary } from '../types/infrastructure';
+import { getOrCreateDeviceId } from '../lib/auth';
 
 function Chip({ children }: { children: ReactNode }) {
   return <span className="rounded-full border border-slate-700 px-2 py-1 text-[11px] text-slate-400">{children}</span>;
@@ -29,6 +30,9 @@ export function SyncPage() {
   const [permissionList, setPermissionList] = useState('read');
   const [syncTargetSpace, setSyncTargetSpace] = useState('operacional');
   const [syncPayload, setSyncPayload] = useState('{"content":"new offline note"}');
+  const [syncSourceAgent, setSyncSourceAgent] = useState('rna-console');
+  const [syncSourceWorkspace, setSyncSourceWorkspace] = useState('rna-console');
+  const [syncSourceRuntime, setSyncSourceRuntime] = useState(() => `browser:${navigator.userAgent.slice(0, 48)}`);
 
   const docs = useCollectionDocsData(selectedCollection || undefined).data || [];
   const permissions = useCollectionPermissionsData(selectedCollection || undefined).data || [];
@@ -76,7 +80,10 @@ export function SyncPage() {
     await createSync.mutateAsync({
       target_space: syncTargetSpace.trim() || selectedCollectionData?.space_id || 'operacional',
       target_collection: selectedCollectionData?.id || selectedCollection || null,
-      source_agent: 'rna-console',
+      source_agent: syncSourceAgent.trim() || 'rna-console',
+      source_device: getOrCreateDeviceId(),
+      source_runtime: syncSourceRuntime.trim() || 'browser',
+      source_workspace: syncSourceWorkspace.trim() || 'rna-console',
       payload: parsedPayload,
     });
   };
@@ -95,7 +102,7 @@ export function SyncPage() {
             </p>
           </header>
 
-          <section className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <section className="space-y-4">
             <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4 shadow-lg shadow-black/20">
               <div className="text-xs uppercase tracking-[0.2em] text-cyan-400/80">Collections</div>
               <div className="mt-2 text-2xl font-semibold text-slate-50">{collections.length}</div>
@@ -118,34 +125,35 @@ export function SyncPage() {
             </div>
           </section>
 
-          <div className="grid grid-cols-1 xl:grid-cols-[300px_1fr] gap-6">
-            <aside className="rounded-[24px] border border-white/10 bg-slate-950/70 p-4 space-y-3 shadow-2xl shadow-black/20">
-              <div>
-                <div className="text-xs uppercase tracking-[0.24em] text-slate-500">Collections</div>
-                <div className="mt-1 text-base font-semibold text-slate-100">Projection scope</div>
+          <section className="space-y-6">
+            <div className="rounded-[24px] border border-white/10 bg-slate-950/70 p-4 shadow-2xl shadow-black/20">
+              <div className="flex flex-col gap-3">
+                <div>
+                  <div className="text-xs uppercase tracking-[0.24em] text-slate-500">Collections</div>
+                  <div className="mt-1 text-base font-semibold text-slate-100">Projection scope</div>
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {collections.map((collection) => (
+                    <button
+                      key={collection.id}
+                      onClick={() => {
+                        setSelectedCollection(collection.id);
+                        setSelectedDoc('');
+                      }}
+                      className={`shrink-0 rounded-full border px-3 py-2 text-left transition-all ${
+                        selectedCollection === collection.id
+                          ? 'border-cyan-400/40 bg-cyan-500/10 text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.08)]'
+                          : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20 hover:bg-white/8'
+                      }`}
+                    >
+                      <div className="font-medium">{collection.name}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5 font-mono">{collection.id}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-2">
-                {collections.map((collection) => (
-                  <button
-                    key={collection.id}
-                    onClick={() => {
-                      setSelectedCollection(collection.id);
-                      setSelectedDoc('');
-                    }}
-                    className={`w-full rounded-xl border px-3 py-3 text-left transition-all ${
-                      selectedCollection === collection.id
-                        ? 'border-cyan-400/40 bg-cyan-500/10 text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.08)]'
-                        : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20 hover:bg-white/8'
-                    }`}
-                  >
-                    <div className="font-medium">{collection.name}</div>
-                    <div className="text-xs text-slate-500 mt-1 font-mono">{collection.id}</div>
-                  </button>
-                ))}
-              </div>
-            </aside>
+            </div>
 
-            <section className="space-y-6">
               <div className="rounded-[24px] border border-white/10 bg-slate-950/70 p-5 shadow-2xl shadow-black/20">
                 <div className="flex items-center justify-between gap-3">
                   <div>
@@ -158,12 +166,18 @@ export function SyncPage() {
                   {pendingProjections.map((fact: FactSummary) => {
                     const projection = fact.projection_status || {};
                     return (
-                      <article key={fact.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                          <article key={fact.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                         <div className="flex items-center justify-between gap-3">
                           <div className="font-medium text-slate-100">{fact.type}</div>
                           <div className="text-xs text-slate-500">{new Date(fact.created_at).toLocaleString()}</div>
                         </div>
                         <div className="mt-2 text-sm text-slate-300 whitespace-pre-wrap">{fact.content}</div>
+                        <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                          {fact.source_agent ? <Chip>{`agent:${fact.source_agent}`}</Chip> : null}
+                          {fact.source_device ? <Chip>{`device:${fact.source_device}`}</Chip> : null}
+                          {fact.source_workspace ? <Chip>{`workspace:${fact.source_workspace}`}</Chip> : null}
+                          {fact.source_runtime ? <Chip>{`runtime:${fact.source_runtime}`}</Chip> : null}
+                        </div>
                         <div className="mt-3 flex flex-wrap gap-2">
                           <Chip>{`neo4j:${projection.neo4j ?? 'unknown'}`}</Chip>
                           <Chip>{`qdrant:${projection.qdrant ?? 'unknown'}`}</Chip>
@@ -205,7 +219,7 @@ export function SyncPage() {
                   <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
                     <h4 className="text-sm font-semibold text-slate-50">Assign permission</h4>
                     <p className="mt-1 text-sm text-slate-400">Grant access to an agent, device, user, or role for this collection.</p>
-                    <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="mt-4 space-y-3">
                       <label className="space-y-2">
                         <span className="text-xs uppercase tracking-[0.2em] text-slate-500">Subject type</span>
                         <select
@@ -252,7 +266,7 @@ export function SyncPage() {
                   </div>
 
                   <div className="mt-5 border-t border-white/10 pt-4">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="space-y-4">
                       <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                         <h4 className="text-sm font-semibold text-slate-50">Create sync entry</h4>
                         <p className="mt-1 text-sm text-slate-400">Queue an offline write or a deferred action for this collection.</p>
@@ -274,6 +288,32 @@ export function SyncPage() {
                               className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100"
                             />
                           </label>
+                          <div className="space-y-3">
+                            <label className="space-y-2 block">
+                              <span className="text-xs uppercase tracking-[0.2em] text-slate-500">Source agent</span>
+                              <input
+                                value={syncSourceAgent}
+                                onChange={(e) => setSyncSourceAgent(e.target.value)}
+                                className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100"
+                              />
+                            </label>
+                            <label className="space-y-2 block">
+                              <span className="text-xs uppercase tracking-[0.2em] text-slate-500">Source workspace</span>
+                              <input
+                                value={syncSourceWorkspace}
+                                onChange={(e) => setSyncSourceWorkspace(e.target.value)}
+                                className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100"
+                              />
+                            </label>
+                            <label className="space-y-2 block">
+                              <span className="text-xs uppercase tracking-[0.2em] text-slate-500">Source runtime</span>
+                              <input
+                                value={syncSourceRuntime}
+                                onChange={(e) => setSyncSourceRuntime(e.target.value)}
+                                className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100"
+                              />
+                            </label>
+                          </div>
                         </div>
                         <div className="mt-4 flex items-center gap-3">
                           <button
@@ -302,6 +342,12 @@ export function SyncPage() {
                               </div>
                               <div className="mt-2 text-xs text-slate-400">
                                 {entry.target_space || 'no-space'} / {entry.target_collection || 'no-collection'}
+                              </div>
+                              <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                                {entry.source_agent ? <Chip>{`agent:${entry.source_agent}`}</Chip> : null}
+                                {entry.source_device ? <Chip>{`device:${entry.source_device}`}</Chip> : null}
+                                {entry.source_workspace ? <Chip>{`workspace:${entry.source_workspace}`}</Chip> : null}
+                                {entry.source_runtime ? <Chip>{`runtime:${entry.source_runtime}`}</Chip> : null}
                               </div>
                               <div className="mt-3 flex items-center gap-2">
                                 <button
@@ -384,8 +430,7 @@ export function SyncPage() {
                   </div>
                 </div>
               )}
-            </section>
-          </div>
+          </section>
         </div>
       </div>
     </ConsoleShell>

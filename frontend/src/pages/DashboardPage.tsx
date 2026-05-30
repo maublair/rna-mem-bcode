@@ -75,7 +75,7 @@ export function DashboardPage() {
                   to resume work without repeating the same diagnosis.
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-3 lg:min-w-[360px]">
+              <div className="grid grid-cols-1 gap-3 lg:min-w-[320px]">
                 <StatCard label="Servers" value={servers.length} tone="text-indigo-300" />
                 <StatCard label="Services" value={services.length} tone="text-cyan-300" />
                 <StatCard label="Devices" value={devices.length} tone="text-emerald-300" />
@@ -84,7 +84,7 @@ export function DashboardPage() {
             </div>
           </section>
 
-          <section className="grid grid-cols-1 lg:grid-cols-[1.18fr_0.82fr] gap-6">
+          <section className="space-y-6">
             <div className="rounded-[28px] border border-white/10 bg-slate-950/78 p-5 shadow-2xl shadow-black/20">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -131,61 +131,59 @@ export function DashboardPage() {
               </div>
             </div>
 
-            <aside className="space-y-6">
-              <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur">
-                <h3 className="text-lg font-semibold text-white">Current Handoff</h3>
-                <p className="mt-2 text-sm text-slate-300">
-                  The next agent should see this before touching any stack or prompt.
-                </p>
-                <div className="mt-4 space-y-3">
-                  <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                    <div className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Recent facts</div>
-                    <div className="mt-2 text-2xl font-semibold text-white">{facts.length}</div>
+            <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur">
+              <h3 className="text-lg font-semibold text-white">Current Handoff</h3>
+              <p className="mt-2 text-sm text-slate-300">
+                The next agent should see this before touching any stack or prompt.
+              </p>
+              <div className="mt-4 space-y-3">
+                <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+                  <div className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Recent facts</div>
+                  <div className="mt-2 text-2xl font-semibold text-white">{facts.length}</div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+                  <div className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Recent traces</div>
+                  <div className="mt-2 text-2xl font-semibold text-white">{traces.length}</div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+                  <div className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Continuity rule</div>
+                  <div className="mt-2 text-sm text-slate-200">
+                    Prefer RNA summaries, topic relations, and handoff cards before raw logs or re-diagnosis.
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                    <div className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Recent traces</div>
-                    <div className="mt-2 text-2xl font-semibold text-white">{traces.length}</div>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                    <div className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Continuity rule</div>
-                    <div className="mt-2 text-sm text-slate-200">
-                      Prefer RNA summaries, topic relations, and handoff cards before raw logs or re-diagnosis.
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur">
+              <h3 className="text-lg font-semibold text-white">Recent Learning</h3>
+              <div className="mt-4 space-y-3">
+                {facts.map((fact) => (
+                  <article key={fact.id} className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-[11px] uppercase tracking-[0.24em] text-cyan-300/80">{fact.type}</div>
+                      <div className="text-[11px] text-slate-500">{new Date(fact.created_at).toLocaleDateString()}</div>
                     </div>
-                  </div>
-                </div>
-              </section>
+                    <div className="mt-2 text-sm text-slate-100">{fact.content}</div>
+                  </article>
+                ))}
+              </div>
+            </div>
 
-              <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur">
-                <h3 className="text-lg font-semibold text-white">Recent Learning</h3>
-                <div className="mt-4 space-y-3 max-h-[34vh] overflow-auto pr-1">
-                  {facts.map((fact) => (
-                    <article key={fact.id} className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="text-[11px] uppercase tracking-[0.24em] text-cyan-300/80">{fact.type}</div>
-                        <div className="text-[11px] text-slate-500">{new Date(fact.created_at).toLocaleDateString()}</div>
-                      </div>
-                      <div className="mt-2 text-sm text-slate-100">{fact.content}</div>
-                    </article>
-                  ))}
-                </div>
-              </section>
-
-              <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur">
-                <h3 className="text-lg font-semibold text-white">Recent Traces</h3>
-                <div className="mt-4 space-y-3 max-h-[28vh] overflow-auto pr-1">
-                  {traces.map((trace) => (
-                    <article key={trace.id} className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="text-sm font-medium text-white">{trace.agent_id}</div>
-                        <div className="text-[11px] text-slate-500">{new Date(trace.created_at).toLocaleTimeString()}</div>
-                      </div>
-                      <div className="mt-2 text-sm text-slate-300 line-clamp-3">{trace.command}</div>
-                      <div className="mt-2 text-[11px] uppercase tracking-[0.24em] text-slate-400">{trace.status}</div>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            </aside>
+            <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur">
+              <h3 className="text-lg font-semibold text-white">Recent Traces</h3>
+              <div className="mt-4 space-y-3">
+                {traces.map((trace) => (
+                  <article key={trace.id} className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm font-medium text-white">{trace.agent_id}</div>
+                      <div className="text-[11px] text-slate-500">{new Date(trace.created_at).toLocaleTimeString()}</div>
+                    </div>
+                    <div className="mt-2 text-sm text-slate-300 line-clamp-3">{trace.command}</div>
+                    <div className="mt-2 text-[11px] uppercase tracking-[0.24em] text-slate-400">{trace.status}</div>
+                  </article>
+                ))}
+              </div>
+            </div>
           </section>
         </div>
       </div>

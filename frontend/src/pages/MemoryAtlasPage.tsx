@@ -229,7 +229,7 @@ export function MemoryAtlasPage() {
                   <span className="rounded-full border border-white/10 bg-slate-950/60 px-3 py-1">token savings</span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3 lg:min-w-[360px]">
+              <div className="grid grid-cols-1 gap-3 lg:min-w-[320px]">
                 <div className="rounded-2xl border border-white/10 bg-slate-950/55 p-4">
                   <div className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Facts</div>
                   <div className="mt-2 text-3xl font-semibold text-white">{facts.length}</div>
@@ -250,7 +250,7 @@ export function MemoryAtlasPage() {
             </div>
           </section>
 
-          <div className="grid grid-cols-1 xl:grid-cols-[1.65fr_0.95fr] gap-6 min-h-[72vh]">
+          <div className="space-y-6">
             <section className="rounded-[28px] border border-white/10 bg-slate-950/70 overflow-hidden shadow-2xl shadow-black/30">
               <div className="border-b border-white/10 px-5 py-4 flex items-center justify-between">
                 <div>
@@ -259,7 +259,7 @@ export function MemoryAtlasPage() {
                 </div>
                 <div className="text-xs text-slate-500">drag, zoom, explore</div>
               </div>
-              <div className="h-[calc(72vh-68px)]">
+              <div className="h-[72vh] min-h-[560px]">
                 <ReactFlow
                   nodes={layout.nodes}
                   edges={layout.edges}
@@ -277,57 +277,55 @@ export function MemoryAtlasPage() {
               </div>
             </section>
 
-            <aside className="space-y-6">
-              <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur">
-                <div className="text-sm font-semibold text-white">Handoff Card</div>
-                <p className="mt-2 text-sm text-slate-300">
-                  What the next agent should know before continuing the work.
-                </p>
-                <div className="mt-4 space-y-3 text-sm">
-                  <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                    <div className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Active topic</div>
-                    <div className="mt-1 font-medium text-white">{selectedTopic || 'none selected'}</div>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                    <div className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Latest trace</div>
-                    <div className="mt-1 font-medium text-white">{recentTrace ? buildSessionLabel(recentTrace) : 'no trace data'}</div>
-                    <div className="mt-2 text-slate-300">{recentTrace?.command?.slice(0, 140) || 'No command context yet.'}</div>
-                  </div>
+            <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur">
+              <div className="text-sm font-semibold text-white">Handoff Card</div>
+              <p className="mt-2 text-sm text-slate-300">
+                What the next agent should know before continuing the work.
+              </p>
+              <div className="mt-4 space-y-3 text-sm">
+                <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+                  <div className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Active topic</div>
+                  <div className="mt-1 font-medium text-white">{selectedTopic || 'none selected'}</div>
                 </div>
-              </section>
+                <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+                  <div className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Latest trace</div>
+                  <div className="mt-1 font-medium text-white">{recentTrace ? buildSessionLabel(recentTrace) : 'no trace data'}</div>
+                  <div className="mt-2 text-slate-300">{recentTrace?.command?.slice(0, 140) || 'No command context yet.'}</div>
+                </div>
+              </div>
+            </section>
 
-              <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold text-white">Related facts</div>
-                    <div className="text-xs text-slate-400">Filtered by the selected node</div>
-                  </div>
-                  <div className="text-xs text-slate-500">{topicFacts.length} shown</div>
+            <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-white">Related facts</div>
+                  <div className="text-xs text-slate-400">Filtered by the selected node</div>
                 </div>
-                <div className="mt-4 space-y-3 max-h-[38vh] overflow-auto pr-1">
-                  {topicFacts.map((fact) => (
-                    <article key={fact.id} className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="text-[11px] uppercase tracking-[0.24em] text-cyan-300/80">{fact.type}</div>
-                        <div className="text-[11px] text-slate-500">{new Date(fact.created_at).toLocaleDateString()}</div>
-                      </div>
-                      <div className="mt-2 text-sm text-slate-100">{fact.content}</div>
-                      <div className="mt-2 text-xs text-slate-400">{(fact.tags || []).join(' • ') || 'no tags'}</div>
-                    </article>
-                  ))}
-                </div>
-              </section>
+                <div className="text-xs text-slate-500">{topicFacts.length} shown</div>
+              </div>
+              <div className="mt-4 space-y-3">
+                {topicFacts.map((fact) => (
+                  <article key={fact.id} className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-[11px] uppercase tracking-[0.24em] text-cyan-300/80">{fact.type}</div>
+                      <div className="text-[11px] text-slate-500">{new Date(fact.created_at).toLocaleDateString()}</div>
+                    </div>
+                    <div className="mt-2 text-sm text-slate-100">{fact.content}</div>
+                    <div className="mt-2 text-xs text-slate-400">{(fact.tags || []).join(' • ') || 'no tags'}</div>
+                  </article>
+                ))}
+              </div>
+            </section>
 
-              <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur">
-                <div className="text-sm font-semibold text-white">Continuity policy</div>
-                <ul className="mt-3 space-y-2 text-sm text-slate-300 list-disc list-inside">
-                  <li>Prefer the session summary before any raw trace.</li>
-                  <li>Use related topics to continue adjacent work without replaying the same investigation.</li>
-                  <li>Write a handoff card after every meaningful fix.</li>
-                  <li>Keep the graph visible so the next agent can see dependencies at a glance.</li>
-                </ul>
-              </section>
-            </aside>
+            <section className="rounded-[28px] border border-white/10 bg-white/5 p-5 backdrop-blur">
+              <div className="text-sm font-semibold text-white">Continuity policy</div>
+              <ul className="mt-3 space-y-2 text-sm text-slate-300 list-disc list-inside">
+                <li>Prefer the session summary before any raw trace.</li>
+                <li>Use related topics to continue adjacent work without replaying the same investigation.</li>
+                <li>Write a handoff card after every meaningful fix.</li>
+                <li>Keep the graph visible so the next agent can see dependencies at a glance.</li>
+              </ul>
+            </section>
           </div>
         </div>
       </div>

@@ -8,6 +8,11 @@ import {
   HealthResponse,
   InfraGraph,
   PairResponse,
+  SessionSummary,
+  TopicSummary,
+  TopicRelationSummary,
+  HandoffCardSummary,
+  AgentMessageSummary,
   Relationship,
   Server,
   Service,
@@ -138,6 +143,8 @@ export const api = {
     target_collection?: string | null;
     source_agent?: string | null;
     source_device?: string | null;
+    source_runtime?: string | null;
+    source_workspace?: string | null;
     payload?: Record<string, unknown>;
     scheduled_at?: string | null;
   }) => request<SyncOutboxEntry>('/v1/sync/pending', { method: 'POST', body: JSON.stringify(body) }),
@@ -182,4 +189,45 @@ export const api = {
     const query = params.toString();
     return request<TraceEntry[]>(`/v1/agents/trace${query ? `?${query}` : ''}`);
   },
+  getAgentSessions: (filters?: { agent_id?: string; limit?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.agent_id) params.append('agent_id', filters.agent_id);
+    if (filters?.limit) params.append('limit', String(filters.limit));
+    const query = params.toString();
+    return request<SessionSummary[]>(`/v1/agents/sessions${query ? `?${query}` : ''}`);
+  },
+  getAgentTopics: (filters?: { limit?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.limit) params.append('limit', String(filters.limit));
+    const query = params.toString();
+    return request<TopicSummary[]>(`/v1/agents/topics${query ? `?${query}` : ''}`);
+  },
+  getTopicRelations: (filters?: { limit?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.limit) params.append('limit', String(filters.limit));
+    const query = params.toString();
+    return request<TopicRelationSummary[]>(`/v1/agents/topics/relations${query ? `?${query}` : ''}`);
+  },
+  getHandoffCards: (filters?: { agent_id?: string; limit?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.agent_id) params.append('agent_id', filters.agent_id);
+    if (filters?.limit) params.append('limit', String(filters.limit));
+    const query = params.toString();
+    return request<HandoffCardSummary[]>(`/v1/agents/handoff${query ? `?${query}` : ''}`);
+  },
+  getAgentMessages: (filters?: { to_agent?: string; limit?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.to_agent) params.append('to_agent', filters.to_agent);
+    if (filters?.limit) params.append('limit', String(filters.limit));
+    const query = params.toString();
+    return request<AgentMessageSummary[]>(`/v1/agents/messages${query ? `?${query}` : ''}`);
+  },
+  sendAgentMessage: (body: {
+    from_agent: string;
+    to_agent?: string;
+    channel?: string;
+    content: string;
+    tags?: string[];
+    metadata?: Record<string, unknown>;
+  }) => request<{ id: string; status: string; fact: unknown; message: AgentMessageSummary }>('/v1/agents/messages', { method: 'POST', body: JSON.stringify(body) }),
 };

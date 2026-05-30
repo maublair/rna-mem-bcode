@@ -96,6 +96,10 @@ function readLocalConfig(localPath: string): RNALocalConfig {
   }
 }
 
+function isLikelyJwt(value: string) {
+  return value.split('.').length === 3;
+}
+
 export class RNALink {
   private apiKey: string;
   private serverUrl: string;
@@ -114,12 +118,30 @@ export class RNALink {
     }
 
     const localConfig = readLocalConfig(this.localPath);
-    this.apiKey = config.apiKey || process.env.RNA_API_KEY || localConfig.api_key || '';
+    const localToken = localConfig.auth_token || (localConfig.api_key && isLikelyJwt(localConfig.api_key) ? localConfig.api_key : '');
+    this.apiKey = config.apiKey || process.env.RNA_API_KEY || localToken || '';
     this.serverUrl = config.serverUrl || process.env.RNA_SERVER_URL || localConfig.rna_server || 'https://rna.bcode.work';
     this.pairingSecret = config.pairingSecret || process.env.RNA_PAIRING_SECRET || localConfig.pairing_secret || '';
     this.deviceId = config.deviceId || localConfig.device_id || crypto.randomUUID();
     this.deviceName = config.deviceName || localConfig.device_name || os.hostname();
-    this.authToken = localConfig.auth_token || '';
+    this.authToken = localConfig.auth_token || localConfig.api_key || '';
+  }
+
+  private buildOrigin(extra: Record<string, unknown> = {}) {
+    const sourceAgent = process.env.RNA_AGENT_ID || process.env.AGENT || this.deviceName || 'unknown-agent';
+    const origin = {
+      source_agent: sourceAgent,
+      source_device: this.deviceId,
+      source_runtime: `${process.platform}:${process.version}`,
+      source_workspace: process.cwd(),
+    };
+    return {
+      ...origin,
+      metadata: {
+        origin,
+        ...extra,
+      },
+    };
   }
 
   private saveConfig(patch: Partial<RNALocalConfig>) {
@@ -174,7 +196,7 @@ export class RNALink {
     const headers = {
       'Content-Type': 'application/json',
       ...(this.authToken ? { Authorization: `Bearer ${this.authToken}` } : {}),
-      ...(this.apiKey ? { 'x-api-key': this.apiKey } : {}),
+      ...(this.authToken ? { 'x-api-key': this.authToken } : {}),
       ...options.headers,
     };
 
@@ -215,13 +237,13 @@ export class RNALink {
 
   async store(req: StoreRequest): Promise<{ id: string }> {
     const timestamp = new Date().toISOString();
-    const factData = { ...req, created_at: timestamp };
+    const factData = { ...req, created_at: timestamp, ...this.buildOrigin({ kind: 'store' }) };
 
     this.saveLocal(req.space, factData, req.type);
 
     const apiResult = await this.request('/v1/facts', {
       method: 'POST',
-      body: JSON.stringify(req),
+      body: JSON.stringify({ ...req, ...this.buildOrigin({ kind: 'store' }) }),
     });
 
     return apiResult || { id: `local_${Date.now()}` };
@@ -230,7 +252,7 @@ export class RNALink {
   async bootstrap(req: BootstrapRequest): Promise<BootstrapResponse> {
     const apiResult = await this.request('/v1/agents/bootstrap', {
       method: 'POST',
-      body: JSON.stringify(req),
+      body: JSON.stringify({ ...req, ...this.buildOrigin({ kind: 'bootstrap' }) }),
     });
 
     if (apiResult) return apiResult;
@@ -260,18 +282,18 @@ export class RNALink {
   }
 
   async learnFromError(req: ErrorData): Promise<void> {
-    this.saveLocal('rna:/operacional/aprendizaje/errores', req, 'ERROR');
+    this.saveLocal('rna:/operacional/aprendizaje/errores', { ...req, ...this.buildOrigin({ kind: 'error' }) }, 'ERROR');
     await this.request('/v1/agents/learn/error', {
       method: 'POST',
-      body: JSON.stringify(req),
+      body: JSON.stringify({ ...req, ...this.buildOrigin({ kind: 'error' }) }),
     });
   }
 
   async learnFromSuccess(req: SuccessData): Promise<void> {
-    this.saveLocal('rna:/operacional/aprendizaje/exitos', req, 'SUCCESS');
+    this.saveLocal('rna:/operacional/aprendizaje/exitos', { ...req, ...this.buildOrigin({ kind: 'success' }) }, 'SUCCESS');
     await this.request('/v1/agents/learn/success', {
       method: 'POST',
-      body: JSON.stringify(req),
+      body: JSON.stringify({ ...req, ...this.buildOrigin({ kind: 'success' }) }),
     });
   }
 
@@ -285,10 +307,10 @@ export class RNALink {
 
   async trace(req: TraceData): Promise<any> {
     const timestamp = new Date().toISOString();
-    this.saveLocal('rna:/operacional/bitacora', { ...req, created_at: timestamp }, 'TRACE');
+    this.saveLocal('rna:/operacional/bitacora', { ...req, created_at: timestamp, ...this.buildOrigin({ kind: 'trace' }) }, 'TRACE');
     const apiResult = await this.request('/v1/agents/trace', {
       method: 'POST',
-      body: JSON.stringify(req),
+      body: JSON.stringify({ ...req, ...this.buildOrigin({ kind: 'trace' }) }),
     });
     return apiResult || { id: `local_${Date.now()}`, status: 'local' };
   }

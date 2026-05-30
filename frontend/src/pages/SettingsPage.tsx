@@ -33,7 +33,7 @@ export function SettingsPage() {
           </p>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {settingsSections.map((section) => (
             <section key={section.title} className="rounded-xl border border-slate-800 bg-slate-900/80 p-5">
               <h3 className="text-lg font-semibold text-slate-100">{section.title}</h3>

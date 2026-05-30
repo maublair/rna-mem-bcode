@@ -25,8 +25,8 @@ export function ConsoleShell({ title, subtitle, isHealthy, children, rightPanel 
   const location = useLocation();
 
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-100">
-      <aside className="w-[19rem] bg-[linear-gradient(180deg,rgba(15,23,42,0.94)_0%,rgba(2,6,23,0.98)_100%)] border-r border-white/10 flex flex-col shadow-2xl shadow-black/30">
+    <div className="flex min-h-dvh flex-col bg-slate-950 text-slate-100 lg:flex-row">
+      <aside className="w-full border-b border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.94)_0%,rgba(2,6,23,0.98)_100%)] shadow-2xl shadow-black/30 lg:w-[19rem] lg:border-b-0 lg:border-r lg:flex lg:flex-col">
         <div className="p-5 border-b border-white/10">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[11px] uppercase tracking-[0.28em] text-cyan-200">
             RNA
@@ -56,7 +56,7 @@ export function ConsoleShell({ title, subtitle, isHealthy, children, rightPanel 
           </div>
         </nav>
 
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto lg:min-h-0">
           <Sidebar />
         </div>
 
@@ -68,7 +68,7 @@ export function ConsoleShell({ title, subtitle, isHealthy, children, rightPanel 
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex min-w-0 flex-1 flex-col">
         <header className="h-16 border-b border-white/10 bg-slate-950/80 backdrop-blur flex items-center justify-between px-6">
           <div>
             <div className="text-sm text-slate-400">RNA / {subtitle}</div>
@@ -81,7 +81,7 @@ export function ConsoleShell({ title, subtitle, isHealthy, children, rightPanel 
       </main>
 
       {rightPanel && (
-        <aside className="w-[24rem] bg-[linear-gradient(180deg,rgba(15,23,42,0.92)_0%,rgba(2,6,23,0.98)_100%)] border-l border-white/10 overflow-auto">
+        <aside className="hidden w-[24rem] overflow-auto border-l border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.92)_0%,rgba(2,6,23,0.98)_100%)] lg:block">
           {rightPanel}
         </aside>
       )}

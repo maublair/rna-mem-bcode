@@ -136,7 +136,7 @@ export function SpacesPage() {
           </p>
         </header>
 
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <section className="grid grid-cols-1 gap-4">
           <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
             <div className="text-xs uppercase tracking-[0.2em] text-cyan-400/80">Spaces</div>
             <div className="mt-2 text-2xl font-semibold">{spaces.length}</div>
@@ -155,7 +155,7 @@ export function SpacesPage() {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[320px_1fr] gap-6">
+        <div className="space-y-6">
           <aside className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 space-y-4">
             <div className="text-sm font-semibold text-slate-100">Spaces</div>
             <div className="space-y-2">
@@ -188,7 +188,7 @@ export function SpacesPage() {
                 </div>
               </div>
 
-              <form className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={collectionForm.handleSubmit(handleCreateCollection)}>
+              <form className="mt-4 grid grid-cols-1 gap-4" onSubmit={collectionForm.handleSubmit(handleCreateCollection)}>
                 <label className="space-y-2">
                   <span className="text-xs uppercase tracking-[0.2em] text-slate-500">Collection ID</span>
                   <input
@@ -244,7 +244,7 @@ export function SpacesPage() {
                 <Badge>{collectionsForSpace.length} collections</Badge>
               </div>
 
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="mt-4 grid grid-cols-1 gap-4">
                 {collectionsForSpace.map((collection: CollectionSummary) => (
                   <button
                     key={collection.id}

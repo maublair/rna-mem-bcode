@@ -130,6 +130,8 @@ export interface FactSummary {
   tags: string[];
   source_agent?: string | null;
   source_device?: string | null;
+  source_runtime?: string | null;
+  source_workspace?: string | null;
   metadata?: Record<string, unknown>;
   projection_status?: Record<string, unknown>;
   created_at: string;
@@ -152,6 +154,75 @@ export interface TraceEntry {
   previous_hash?: string | null;
   entry_hash: string;
   created_at: string;
+}
+
+export interface SessionSummary {
+  id: string;
+  agent_id: string;
+  session_id: string;
+  objective: string;
+  status: string;
+  summary?: string | null;
+  started_at?: string | null;
+  ended_at?: string | null;
+  metadata?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TopicSummary {
+  id: string;
+  topic_id: string;
+  title: string;
+  summary?: string | null;
+  tags: string[];
+  session_id?: string | null;
+  related_topics: string[];
+  metadata?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TopicRelationSummary {
+  id: string;
+  source_topic: string;
+  target_topic: string;
+  relation_type: string;
+  weight: number;
+  metadata?: Record<string, unknown>;
+  created_at: string;
+  updated_at?: string | null;
+}
+
+export interface HandoffCardSummary {
+  id: string;
+  agent_id: string;
+  session_id?: string | null;
+  topic_id?: string | null;
+  summary: string;
+  next_steps: string[];
+  blockers: string[];
+  avoid: string[];
+  metadata?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentMessageSummary {
+  id: string;
+  from_agent: string;
+  to_agent: string;
+  channel: string;
+  content: string;
+  tags: string[];
+  metadata?: Record<string, unknown>;
+  source_device?: string | null;
+  source_agent?: string | null;
+  source_runtime?: string | null;
+  source_workspace?: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CollectionPermission {
@@ -178,6 +249,8 @@ export interface SyncOutboxEntry {
   id: string;
   source_device?: string | null;
   source_agent?: string | null;
+  source_runtime?: string | null;
+  source_workspace?: string | null;
   target_space?: string | null;
   target_collection?: string | null;
   payload: Record<string, unknown>;

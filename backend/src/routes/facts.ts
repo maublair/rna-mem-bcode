@@ -37,6 +37,8 @@ router.post('/', async (req: AuthedRequest, res) => {
       tags: Array.isArray(tags) ? tags.map(String) : [],
       sourceAgent: req.body.agent_id ? String(req.body.agent_id) : undefined,
       sourceDevice: req.device?.deviceId,
+      sourceRuntime: req.body.runtime ? String(req.body.runtime) : undefined,
+      sourceWorkspace: req.body.workspace ? String(req.body.workspace) : undefined,
       metadata: req.body.metadata || {},
     });
     res.status(201).json({ id: fact.id, status: 'created', fact });

@@ -45,7 +45,7 @@ export function BackupsPage() {
             </p>
           </header>
 
-          <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <section className="grid grid-cols-1 gap-4">
             <Stat label="Snapshots" value={snapshots.length} />
             <Stat label="Latest status" value={latest?.status ?? 'none'} />
             <Stat label="Latest kind" value={latest?.kind ?? 'none'} />
@@ -70,7 +70,7 @@ export function BackupsPage() {
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="mt-4 grid grid-cols-1 gap-4">
               <Stat label="Configured" value={hook?.configured ? 'yes' : 'no'} />
               <Stat label="Exists" value={hook?.exists ? 'yes' : 'no'} />
               <Stat label="Executable" value={hook?.executable ? 'yes' : 'no'} />
@@ -100,7 +100,7 @@ export function BackupsPage() {
           {latest && (
             <section className="rounded-[24px] border border-white/10 bg-slate-950/70 p-5 shadow-2xl shadow-black/20">
               <h3 className="text-lg font-semibold text-slate-50">Latest snapshot</h3>
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-400">
+            <div className="mt-4 grid grid-cols-1 gap-4 text-sm text-slate-400">
               <div>Status: <span className="text-slate-100">{latest.status}</span></div>
               <div>Kind: <span className="text-slate-100">{latest.kind}</span></div>
               <div>Location: <span className="text-slate-100">{latest.location || 'n/a'}</span></div>
@@ -122,7 +122,7 @@ export function BackupsPage() {
             <p className="mt-1 text-sm text-slate-400">
               Restore PostgreSQL first, then rebuild projections. This matches the backup policy and keeps canonical memory intact.
             </p>
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="mt-4 grid grid-cols-1 gap-4">
               <div>
                 <div className="text-xs uppercase tracking-[0.2em] text-slate-500 mb-2">Order</div>
                 <div className="space-y-2">
@@ -215,7 +215,7 @@ export function BackupsPage() {
               </button>
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div className="mt-4 grid grid-cols-1 gap-4 text-sm">
             <Stat label="Restore jobs" value={restoreJobs.length} />
             <Stat label="Latest mode" value={latestRestoreJob?.mode ?? 'none'} />
             <Stat label="Latest status" value={latestRestoreJob?.status ?? 'none'} />
