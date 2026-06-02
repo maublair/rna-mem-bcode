@@ -4,6 +4,9 @@ import { api } from '../lib/api';
 export const RNA_QUERY_KEYS = {
   spaces: ['rna', 'spaces'] as const,
   collections: ['rna', 'collections'] as const,
+  projects: ['rna', 'projects'] as const,
+  projectDetail: (projectId: string) => ['rna', 'project-detail', projectId] as const,
+  projectFiles: (projectId: string) => ['rna', 'project-files', projectId] as const,
   facts: (filters?: object) => ['rna', 'facts', filters] as const,
   collectionDocs: (collectionId: string) => ['rna', 'collection-docs', collectionId] as const,
   collectionDoc: (docId: string) => ['rna', 'collection-doc', docId] as const,
@@ -35,6 +38,32 @@ export function useCollectionsData() {
     queryKey: RNA_QUERY_KEYS.collections,
     queryFn: api.getCollections,
     staleTime: 30 * 1000,
+  });
+}
+
+export function useProjectsData() {
+  return useQuery({
+    queryKey: RNA_QUERY_KEYS.projects,
+    queryFn: api.getProjects,
+    staleTime: 15 * 1000,
+  });
+}
+
+export function useProjectDetailData(projectId?: string) {
+  return useQuery({
+    queryKey: RNA_QUERY_KEYS.projectDetail(projectId || 'all'),
+    queryFn: () => api.getProjectDetail(projectId || ''),
+    enabled: Boolean(projectId),
+    staleTime: 15 * 1000,
+  });
+}
+
+export function useProjectFilesData(projectId?: string) {
+  return useQuery({
+    queryKey: RNA_QUERY_KEYS.projectFiles(projectId || 'all'),
+    queryFn: () => api.getProjectFiles(projectId || ''),
+    enabled: Boolean(projectId),
+    staleTime: 15 * 1000,
   });
 }
 

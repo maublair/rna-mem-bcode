@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { ConsoleShell } from '../components/layout/ConsoleShell';
 import { useHealth } from '../hooks/useInfrastructure';
-import { useAgentMessagesData, useCollectionsData, useFactsData, useHandoffCardsData, useSessionsData, useTopicRelationsData, useTopicsData, useTraceData } from '../hooks/useRNAData';
+import { useAgentMessagesData, useCollectionsData, useFactsData, useHandoffCardsData, useProjectDetailData, useProjectFilesData, useProjectsData, useSessionsData, useTopicRelationsData, useTopicsData, useTraceData } from '../hooks/useRNAData';
 import type { AgentMessageSummary, HandoffCardSummary, SessionSummary, TopicSummary, TraceEntry } from '../types/infrastructure';
 import { api } from '../lib/api';
 
@@ -28,6 +28,13 @@ export function AdminPage() {
   const [topicFilter, setTopicFilter] = useState('');
   const [messageComposer, setMessageComposer] = useState('');
   const [messageTarget, setMessageTarget] = useState('all');
+  const [projectSelection, setProjectSelection] = useState('');
+  const [projectIdInput, setProjectIdInput] = useState('');
+  const [projectTitleInput, setProjectTitleInput] = useState('');
+  const [projectObjectiveInput, setProjectObjectiveInput] = useState('');
+  const [fileNameInput, setFileNameInput] = useState('');
+  const [fileSummaryInput, setFileSummaryInput] = useState('');
+  const [fileContentInput, setFileContentInput] = useState('');
 
   const traces = useTraceData({ limit: 80 }).data || [];
   const sessions = useSessionsData({ agent_id: agentFilter || undefined, limit: 60 }).data || [];
@@ -37,17 +44,31 @@ export function AdminPage() {
   const messages = useAgentMessagesData({ to_agent: messageTarget || undefined, limit: 80 }).data || [];
   const facts = useFactsData({ space: 'operacional', limit: 120 }).data || [];
   const collections = useCollectionsData().data || [];
+  const projects = useProjectsData().data || [];
+  const selectedProjectId = projectSelection || projects[0]?.project_id || '';
+  const selectedProjectDetail = useProjectDetailData(selectedProjectId).data || null;
+  const selectedProjectFiles = useProjectFilesData(selectedProjectId).data || [];
+  const safeFacts = Array.isArray(facts) ? facts : [];
+  const safeTraces = Array.isArray(traces) ? traces : [];
+  const safeSessions = Array.isArray(sessions) ? sessions : [];
+  const safeTopics = Array.isArray(topics) ? topics : [];
+  const safeRelations = Array.isArray(relations) ? relations : [];
+  const safeHandoffs = Array.isArray(handoffs) ? handoffs : [];
+  const safeMessages = Array.isArray(messages) ? messages : [];
+  const safeCollections = Array.isArray(collections) ? collections : [];
+  const safeProjects = Array.isArray(projects) ? projects : [];
+  const safeProjectFiles = Array.isArray(selectedProjectFiles) ? selectedProjectFiles : [];
 
-  const filteredFacts = useMemo(() => facts.filter((fact) => {
+  const filteredFacts = useMemo(() => safeFacts.filter((fact) => {
     const agentOk = !agentFilter || (fact.source_agent || '').toLowerCase().includes(agentFilter.toLowerCase());
     const deviceOk = !deviceFilter || (fact.source_device || '').toLowerCase().includes(deviceFilter.toLowerCase());
     const runtimeOk = !runtimeFilter || (fact.source_runtime || '').toLowerCase().includes(runtimeFilter.toLowerCase());
     const workspaceOk = !workspaceFilter || (fact.source_workspace || '').toLowerCase().includes(workspaceFilter.toLowerCase());
     const topicOk = !topicFilter || fact.content.toLowerCase().includes(topicFilter.toLowerCase()) || (fact.tags || []).some((tag) => tag.toLowerCase().includes(topicFilter.toLowerCase()));
     return agentOk && deviceOk && runtimeOk && workspaceOk && topicOk;
-  }), [facts, agentFilter, deviceFilter, runtimeFilter, workspaceFilter, topicFilter]);
+  }), [safeFacts, agentFilter, deviceFilter, runtimeFilter, workspaceFilter, topicFilter]);
 
-  const filteredTraces = useMemo(() => traces.filter((trace: TraceEntry) => {
+  const filteredTraces = useMemo(() => safeTraces.filter((trace: TraceEntry) => {
     const agentOk = !agentFilter || trace.agent_id.toLowerCase().includes(agentFilter.toLowerCase());
     const deviceOk = !deviceFilter || (trace.device_id || '').toLowerCase().includes(deviceFilter.toLowerCase());
     const runtimeValue = String(trace.metadata?.runtime || trace.metadata?.source_runtime || '');
@@ -56,34 +77,34 @@ export function AdminPage() {
     const workspaceOk = !workspaceFilter || workspaceValue.toLowerCase().includes(workspaceFilter.toLowerCase());
     const topicOk = !topicFilter || trace.command.toLowerCase().includes(topicFilter.toLowerCase()) || (trace.result_summary || '').toLowerCase().includes(topicFilter.toLowerCase());
     return agentOk && deviceOk && runtimeOk && workspaceOk && topicOk;
-  }), [traces, agentFilter, deviceFilter, runtimeFilter, workspaceFilter, topicFilter]);
+  }), [safeTraces, agentFilter, deviceFilter, runtimeFilter, workspaceFilter, topicFilter]);
 
-  const filteredSessions = useMemo(() => sessions.filter((session: SessionSummary) => {
+  const filteredSessions = useMemo(() => safeSessions.filter((session: SessionSummary) => {
     const agentOk = !agentFilter || session.agent_id.toLowerCase().includes(agentFilter.toLowerCase());
     const topicOk = !topicFilter || session.objective.toLowerCase().includes(topicFilter.toLowerCase()) || (session.summary || '').toLowerCase().includes(topicFilter.toLowerCase());
     return agentOk && topicOk;
-  }), [sessions, agentFilter, topicFilter]);
+  }), [safeSessions, agentFilter, topicFilter]);
 
-  const filteredTopics = useMemo(() => topics.filter((topic: TopicSummary) => {
+  const filteredTopics = useMemo(() => safeTopics.filter((topic: TopicSummary) => {
     const topicOk = !topicFilter || topic.title.toLowerCase().includes(topicFilter.toLowerCase()) || topic.topic_id.toLowerCase().includes(topicFilter.toLowerCase());
     const topicMeta = topic.metadata as { origin?: { source_agent?: string } } | undefined;
     const agentOk = !agentFilter || String(topicMeta?.origin?.source_agent || '').toLowerCase().includes(agentFilter.toLowerCase());
     return topicOk && agentOk;
-  }), [topics, agentFilter, topicFilter]);
+  }), [safeTopics, agentFilter, topicFilter]);
 
-  const filteredHandoffs = useMemo(() => handoffs.filter((handoff: HandoffCardSummary) => {
+  const filteredHandoffs = useMemo(() => safeHandoffs.filter((handoff: HandoffCardSummary) => {
     const agentOk = !agentFilter || handoff.agent_id.toLowerCase().includes(agentFilter.toLowerCase());
     const topicOk = !topicFilter || handoff.summary.toLowerCase().includes(topicFilter.toLowerCase()) || handoff.next_steps.some((step) => step.toLowerCase().includes(topicFilter.toLowerCase()));
     return agentOk && topicOk;
-  }), [handoffs, agentFilter, topicFilter]);
+  }), [safeHandoffs, agentFilter, topicFilter]);
 
-  const relationPreview = relations.slice(0, 14);
+  const relationPreview = safeRelations.slice(0, 14);
 
-  const filteredMessages = useMemo(() => messages.filter((message: AgentMessageSummary) => {
+  const filteredMessages = useMemo(() => safeMessages.filter((message: AgentMessageSummary) => {
     const agentOk = !agentFilter || message.from_agent.toLowerCase().includes(agentFilter.toLowerCase()) || message.to_agent.toLowerCase().includes(agentFilter.toLowerCase());
     const topicOk = !topicFilter || message.content.toLowerCase().includes(topicFilter.toLowerCase()) || (message.tags || []).some((tag) => tag.toLowerCase().includes(topicFilter.toLowerCase()));
     return agentOk && topicOk;
-  }), [messages, agentFilter, topicFilter]);
+  }), [safeMessages, agentFilter, topicFilter]);
 
   const sendMessage = async () => {
     const content = messageComposer.trim();
@@ -99,6 +120,44 @@ export function AdminPage() {
       },
     });
     setMessageComposer('');
+  };
+
+  const createProject = async () => {
+    const project_id = projectIdInput.trim();
+    const title = projectTitleInput.trim();
+    if (!project_id || !title) return;
+    await api.createProject({
+      project_id,
+      title,
+      objective: projectObjectiveInput.trim() || undefined,
+      space_id: 'operacional',
+      status: 'active',
+      owner_agent: agentFilter || 'codex',
+      metadata: {
+        source_runtime: runtimeFilter || 'browser',
+        source_workspace: workspaceFilter || 'rna-console',
+      },
+    });
+    setProjectIdInput('');
+    setProjectTitleInput('');
+    setProjectObjectiveInput('');
+  };
+
+  const uploadProjectFile = async () => {
+    const filename = fileNameInput.trim();
+    if (!filename || !selectedProjectId) return;
+    await api.createProjectFile(selectedProjectId, {
+      filename,
+      summary: fileSummaryInput.trim() || undefined,
+      content: fileContentInput.trim() || undefined,
+      source_agent: agentFilter || 'codex',
+      source_device: deviceFilter || undefined,
+      source_runtime: runtimeFilter || 'browser',
+      source_workspace: workspaceFilter || 'rna-console',
+    });
+    setFileNameInput('');
+    setFileSummaryInput('');
+    setFileContentInput('');
   };
 
   return (
@@ -118,7 +177,7 @@ export function AdminPage() {
 
             <section className="space-y-4">
               <Metric label="Health" value={healthQuery.data?.status ?? 'unknown'} />
-              <Metric label="Collections" value={collections.length} />
+              <Metric label="Collections" value={safeCollections.length} />
               <Metric label="Operational facts" value={filteredFacts.length} />
               <Metric label="Trace entries" value={filteredTraces.length} />
             </section>
@@ -206,7 +265,7 @@ export function AdminPage() {
                   <article key={topic.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                     <div className="flex items-center justify-between gap-3"><div className="font-medium text-slate-100">{topic.title}</div><div className="text-xs text-slate-500">{topic.topic_id}</div></div>
                     {topic.summary ? <div className="mt-2 text-sm text-slate-300">{topic.summary}</div> : null}
-                    <div className="mt-3 flex flex-wrap gap-2">{topic.tags.slice(0, 5).map((tag) => (<Chip key={tag}>{tag}</Chip>))}</div>
+                    <div className="mt-3 flex flex-wrap gap-2">{(Array.isArray(topic.tags) ? topic.tags : []).slice(0, 5).map((tag) => (<Chip key={tag}>{tag}</Chip>))}</div>
                   </article>
                 ))}
                 <div className="mt-4 border-t border-white/10 pt-4">
@@ -228,6 +287,69 @@ export function AdminPage() {
                     <div className="mt-3 space-y-2 text-xs text-slate-400"><div><span className="text-slate-500">Next:</span> {handoff.next_steps.join(' • ') || '—'}</div><div><span className="text-slate-500">Blockers:</span> {handoff.blockers.join(' • ') || '—'}</div><div><span className="text-slate-500">Avoid:</span> {handoff.avoid.join(' • ') || '—'}</div></div>
                   </article>
                 ))}
+              </div>
+            </section>
+
+            <section className="rounded-[24px] border border-white/10 bg-slate-950/70 p-5 shadow-2xl shadow-black/20">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-50">Projects and files</h3>
+                  <p className="text-sm text-slate-400">Create a project, attach files, and read the summary before raw content.</p>
+                </div>
+                  <Chip>{safeProjects.length}</Chip>
+              </div>
+              <div className="mt-4 space-y-4">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
+                  <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Create project</div>
+                  <input value={projectIdInput} onChange={(e) => setProjectIdInput(e.target.value)} placeholder="project id" className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500" />
+                  <input value={projectTitleInput} onChange={(e) => setProjectTitleInput(e.target.value)} placeholder="project title" className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500" />
+                  <textarea value={projectObjectiveInput} onChange={(e) => setProjectObjectiveInput(e.target.value)} placeholder="objective" rows={3} className="w-full rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-100 placeholder:text-slate-500" />
+                  <button type="button" onClick={createProject} className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100 hover:bg-cyan-400/20">Create project</button>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
+                  <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Attach file</div>
+                  <label className="space-y-2">
+                    <span className="text-xs uppercase tracking-[0.2em] text-slate-500">Project</span>
+                    <select value={selectedProjectId} onChange={(e) => setProjectSelection(e.target.value)} className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100">
+                      {safeProjects.map((project) => <option key={project.project_id} value={project.project_id}>{project.title}</option>)}
+                    </select>
+                  </label>
+                  <input value={fileNameInput} onChange={(e) => setFileNameInput(e.target.value)} placeholder="filename" className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500" />
+                  <input value={fileSummaryInput} onChange={(e) => setFileSummaryInput(e.target.value)} placeholder="summary (optional)" className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500" />
+                  <textarea value={fileContentInput} onChange={(e) => setFileContentInput(e.target.value)} placeholder="content or excerpt" rows={5} className="w-full rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-100 placeholder:text-slate-500" />
+                  <button type="button" onClick={uploadProjectFile} className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-sm text-emerald-100 hover:bg-emerald-400/20">Attach file</button>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Selected project</div>
+                      <div className="mt-1 text-base font-semibold text-slate-100">{projects.find((project) => project.project_id === selectedProjectId)?.title || 'No project selected'}</div>
+                    </div>
+                    <Chip>{selectedProjectFiles.length} files</Chip>
+                  </div>
+                  <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-slate-300">
+                    <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Summary first</div>
+                    <div className="mt-2 whitespace-pre-wrap">{selectedProjectDetail?.project.objective || selectedProjectDetail?.project.handoff_card || 'No project summary yet'}</div>
+                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                      <Chip>{selectedProjectDetail?.file_count ?? safeProjectFiles.length} files</Chip>
+                      {selectedProjectDetail?.project.owner_agent ? <Chip>{`owner:${selectedProjectDetail.project.owner_agent}`}</Chip> : null}
+                      {selectedProjectDetail?.project.current_session_id ? <Chip>{`session:${selectedProjectDetail.project.current_session_id}`}</Chip> : null}
+                    </div>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    {safeProjectFiles.map((file) => (
+                      <article key={file.id} className="rounded-xl border border-white/10 bg-white/5 p-4">
+                        <div className="flex items-center justify-between gap-3"><div className="font-medium text-slate-100">{file.filename}</div><div className="text-xs text-slate-500">{file.mime_type || 'text/plain'}</div></div>
+                        <div className="mt-2 text-sm text-slate-300">{file.summary || 'No summary yet'}</div>
+                        <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                          {file.source_agent ? <Chip>{`agent:${file.source_agent}`}</Chip> : null}
+                          {file.source_runtime ? <Chip>{`runtime:${file.source_runtime}`}</Chip> : null}
+                          {file.source_workspace ? <Chip>{`workspace:${file.source_workspace}`}</Chip> : null}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
               </div>
             </section>
 

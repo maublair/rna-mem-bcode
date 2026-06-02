@@ -8,6 +8,9 @@ import {
   HealthResponse,
   InfraGraph,
   PairResponse,
+  ProjectFileSummary,
+  ProjectDetailSummary,
+  ProjectSummary,
   SessionSummary,
   TopicSummary,
   TopicRelationSummary,
@@ -93,6 +96,27 @@ export const api = {
   getSpaces: () => request<SpaceSummary[]>('/v1/spaces'),
 
   getCollections: () => request<CollectionSummary[]>('/v1/collections'),
+  getProjects: () => request<ProjectSummary[]>('/v1/projects'),
+  getProjectDetail: (projectId: string) => request<ProjectDetailSummary>(`/v1/projects/${projectId}`),
+  createProject: (body: Partial<ProjectSummary> & { project_id: string; title: string }) =>
+    request<ProjectSummary>('/v1/projects', { method: 'POST', body: JSON.stringify(body) }),
+  getProjectFiles: (projectId: string) => request<ProjectFileSummary[]>(`/v1/projects/${projectId}/files`),
+  createProjectFile: (
+    projectId: string,
+    body: {
+      filename: string;
+      mime_type?: string | null;
+      size_bytes?: number | null;
+      content?: string | null;
+      summary?: string | null;
+      tags?: string[];
+      metadata?: Record<string, unknown>;
+      source_agent?: string | null;
+      source_device?: string | null;
+      source_runtime?: string | null;
+      source_workspace?: string | null;
+    }
+  ) => request<ProjectFileSummary>(`/v1/projects/${projectId}/files`, { method: 'POST', body: JSON.stringify(body) }),
   createCollection: (body: {
     id: string;
     space_id?: string | null;

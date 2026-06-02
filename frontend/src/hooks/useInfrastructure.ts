@@ -34,11 +34,13 @@ export function useDevices() {
   });
 }
 
-export function useGraph() {
+export function useGraph(enabled = true) {
   return useQuery({
     queryKey: QUERY_KEYS.graph,
     queryFn: api.getGraph,
+    enabled,
     staleTime: 15 * 1000,
+    retry: false,
     refetchOnWindowFocus: true,
   });
 }

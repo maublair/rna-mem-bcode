@@ -40,6 +40,14 @@ router.post('/', async (req: AuthedRequest, res: Response) => {
   res.status(201).json(project);
 });
 
+router.get('/:projectId', async (req: AuthedRequest, res: Response) => {
+  const projects = await listProjects(500);
+  const project = projects.find((item) => item.project_id === req.params.projectId);
+  if (!project) return res.status(404).json({ error: 'project_not_found' });
+  const files = await listProjectFiles(req.params.projectId, Number(req.query.limit || 200));
+  res.json({ project, files, file_count: files.length });
+});
+
 router.get('/:projectId/files', async (req: AuthedRequest, res: Response) => {
   const files = await listProjectFiles(req.params.projectId, Number(req.query.limit || 200));
   res.json(files);

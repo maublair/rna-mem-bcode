@@ -411,15 +411,15 @@ export async function getInfrastructureGraph() {
   await ensureInfrastructureSchema();
 
   // Get all infrastructure entities
-  const serversResult = await postgres.query(`SELECT id, name, type as _type FROM rna_infrastructure_servers`);
-  const servicesResult = await postgres.query(`SELECT id, name, type as _type FROM rna_infrastructure_services`);
-  const devicesResult = await postgres.query(`SELECT id, name, type as _type FROM rna_infrastructure_devices`);
+  const serversResult = await postgres.query(`SELECT id, name FROM rna_infrastructure_servers`);
+  const servicesResult = await postgres.query(`SELECT id, name FROM rna_infrastructure_services`);
+  const devicesResult = await postgres.query(`SELECT id, name FROM rna_infrastructure_devices`);
   const relsResult = await postgres.query(`SELECT * FROM rna_infrastructure_relationships`);
 
   const nodes = [
-    ...serversResult.rows.map(r => ({ ...r, entityType: 'server' })),
-    ...servicesResult.rows.map(r => ({ ...r, entityType: 'service' })),
-    ...devicesResult.rows.map(r => ({ ...r, entityType: 'device' })),
+    ...serversResult.rows.map(r => ({ ...r, _type: 'server', entityType: 'server' })),
+    ...servicesResult.rows.map(r => ({ ...r, _type: 'service', entityType: 'service' })),
+    ...devicesResult.rows.map(r => ({ ...r, _type: 'device', entityType: 'device' })),
   ];
 
   const edges = relsResult.rows.map(r => ({

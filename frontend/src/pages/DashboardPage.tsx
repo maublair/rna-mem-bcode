@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from '../hooks/useAuth';
 import { useDevices, useGraph, useHealth, useServers, useServices } from '../hooks/useInfrastructure';
 import { useFactsData, useTraceData } from '../hooks/useRNAData';
 import { ConsoleShell } from '../components/layout/ConsoleShell';
@@ -18,11 +19,12 @@ function StatCard({ label, value, tone }: { label: string; value: string | numbe
 export function DashboardPage() {
   const [viewMode, setViewMode] = useState<'wiki' | 'graph'>('wiki');
   const [selectedEntity, setSelectedEntity] = useState<{ type: string; id: string } | null>(null);
+  const { isPaired, token, logout } = useAuth();
 
   const serversQuery = useServers();
   const servicesQuery = useServices();
   const devicesQuery = useDevices();
-  const graphQuery = useGraph();
+  const graphQuery = useGraph(Boolean(token));
   const healthQuery = useHealth();
   const factsQuery = useFactsData({ space: 'operacional', limit: 8 });
   const traceQuery = useTraceData({ limit: 8 });
@@ -34,6 +36,7 @@ export function DashboardPage() {
   const traces = traceQuery.data || [];
 
   const isLoading = serversQuery.isLoading || servicesQuery.isLoading || devicesQuery.isLoading;
+  const graphUnavailable = !token || graphQuery.isError;
 
   const selectedData =
     selectedEntity?.type === 'server'
@@ -91,6 +94,25 @@ export function DashboardPage() {
                   <h3 className="text-lg font-semibold text-slate-50">Mode</h3>
                   <p className="text-sm text-slate-400">Narrative wiki or structural graph.</p>
                 </div>
+                <div className="flex flex-col items-end gap-2 text-right">
+                  <div className="text-xs uppercase tracking-[0.24em] text-slate-500">{isPaired ? 'Paired' : 'Pairing required'}</div>
+                  {!isPaired ? (
+                    <div className="text-xs text-slate-400">Reconnect the device to load graph and memory views.</div>
+                  ) : graphUnavailable ? (
+                    <div className="text-xs text-amber-300">
+                      Graph unavailable. The rest of RNA remains usable.
+                    </div>
+                  ) : null}
+                  {token ? (
+                    <button
+                      type="button"
+                      onClick={() => void logout()}
+                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300 hover:bg-white/10"
+                    >
+                      Re-pair
+                    </button>
+                  ) : null}
+                </div>
                 <div className="inline-flex rounded-full border border-white/10 bg-slate-900 p-1">
                   <button
                     onClick={() => setViewMode('wiki')}
@@ -114,6 +136,21 @@ export function DashboardPage() {
               <div className="mt-4 min-h-[58vh] rounded-3xl border border-white/10 bg-slate-950/55 overflow-hidden">
                 {isLoading ? (
                   <div className="flex items-center justify-center h-[58vh] text-slate-400">Loading infrastructure...</div>
+                ) : graphUnavailable && viewMode === 'graph' ? (
+                  <div className="flex h-[58vh] flex-col items-center justify-center gap-3 px-6 text-center">
+                    <div className="text-lg font-medium text-slate-100">Graph is not available right now</div>
+                    <div className="max-w-xl text-sm text-slate-400">
+                      The auth token is missing, expired, or the graph service returned a transient failure. Wiki view,
+                      facts, sessions, and traces remain available.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => window.dispatchEvent(new Event('rna:unauthorized'))}
+                      className="rounded-full bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-950"
+                    >
+                      Reconnect RNA
+                    </button>
+                  </div>
                 ) : viewMode === 'wiki' ? (
                   <WikiView
                     servers={servers}

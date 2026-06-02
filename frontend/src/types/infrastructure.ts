@@ -106,6 +106,56 @@ export interface CollectionSummary {
   updated_at: string;
 }
 
+export interface ProjectSummary {
+  project_id: string;
+  space_id: string | null;
+  title: string;
+  objective?: string | null;
+  status: string;
+  priority?: string | null;
+  owner_agent?: string | null;
+  current_session_id?: string | null;
+  active_topics: string[];
+  parallel_tracks: string[];
+  handoff_card?: string | null;
+  relations?: unknown[];
+  artifacts?: unknown[];
+  milestones: string[];
+  risks: string[];
+  decisions: string[];
+  open_questions: string[];
+  brainstorming: string[];
+  constraints: string[];
+  version?: string | null;
+  metadata?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectFileSummary {
+  id: string;
+  project_id: string;
+  filename: string;
+  mime_type?: string | null;
+  size_bytes?: number | null;
+  content?: string | null;
+  summary?: string | null;
+  tags: string[];
+  metadata?: Record<string, unknown>;
+  source_agent?: string | null;
+  source_device?: string | null;
+  source_runtime?: string | null;
+  source_workspace?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectDetailSummary {
+  project: ProjectSummary;
+  files: ProjectFileSummary[];
+  file_count: number;
+}
+
 export interface DocumentSummary {
   id: string;
   collection_id: string;

@@ -1,14 +1,14 @@
 import neo4j from 'neo4j-driver';
 
-const uri = process.env.NEO4J_URI || 'bolt://neo4j:7687';
+const uri = process.env.NEO4J_URI || 'bolt://rna-neo4j:7687';
 const user = process.env.NEO4J_USER || 'neo4j';
 const password = process.env.NEO4J_PASSWORD;
+const authMode = (process.env.NEO4J_AUTH || '').toLowerCase();
 
-const auth = password
-  ? neo4j.auth.basic(user, password)
-  : neo4j.auth.basic('neo4j', '');
-
-const driver = neo4j.driver(uri, auth);
+const driver =
+  authMode === 'none' || !password
+    ? neo4j.driver(uri)
+    : neo4j.driver(uri, neo4j.auth.basic(user, password));
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   let timeoutId: NodeJS.Timeout;
@@ -28,7 +28,12 @@ export const runQuery = async (cypher: string, params?: any, timeoutMs = 5000) =
   }
 };
 
+export async function verifyNeo4jConnectivity() {
+  return driver.verifyConnectivity();
+}
+
 export default {
   driver,
   runQuery,
+  verifyNeo4jConnectivity,
 };
