@@ -1,0 +1,22 @@
+{
+  "id": "fact_local_rna_memory_atlas_ux_20260603",
+  "space_id": "operacional",
+  "type": "memory_atlas_ui",
+  "content": "RNA frontend was redesigned into an Obsidian-like atlas with a left navigation rail, a vertical central reading surface, and a right detail pane. Projects, spaces, files, facts, sessions, topics, handoff cards, traces and relations can now be opened by click to inspect the full object without breaking the content flow. The frontend was rebuilt and redeployed successfully.",
+  "tags": [
+    "rna",
+    "frontend",
+    "memory-atlas",
+    "ux-ui",
+    "obsidian-like",
+    "projects",
+    "spaces",
+    "files",
+    "hand-off"
+  ],
+  "source_agent": "codex",
+  "source_device": "host",
+  "source_runtime": "commentary",
+  "source_workspace": "/home/mblair/srv/stacks/rna/frontend",
+  "created_at": "2026-06-03T00:00:00Z"
+}
