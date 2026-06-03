@@ -251,7 +251,7 @@ export function MemoryAtlasPage() {
   const healthQuery = useHealth();
   const spaces = useSpacesData().data || [];
   const projects = useProjectsData().data || [];
-  const projectId = projects[0]?.project_id || '';
+  const featuredProjectId = projects.find((project) => project.project_id === 'rna-topology-map')?.project_id || projects[0]?.project_id || '';
   const collections = useCollectionsData().data || [];
   const facts = useFactsData({ limit: 120 }).data || [];
   const sessions = useSessionsData({ limit: 60 }).data || [];
@@ -279,7 +279,7 @@ export function MemoryAtlasPage() {
   const [expandedFileId, setExpandedFileId] = useState<string | null>(null);
   const [focusFileMode, setFocusFileMode] = useState(false);
   const [fileEditBuffer, setFileEditBuffer] = useState('');
-  const selectedProjectId = selection?.kind === 'project' ? selection.id : projectId;
+  const selectedProjectId = selection?.kind === 'project' ? selection.id : featuredProjectId;
   const projectDetail = useProjectDetailData(selectedProjectId).data || null;
   const projectFiles = useProjectFilesData(selectedProjectId).data || [];
   const safeProjectFiles = Array.isArray(projectFiles) ? projectFiles : [];
@@ -338,7 +338,7 @@ export function MemoryAtlasPage() {
     return safeProjectFiles;
   }, [safeProjectFiles, selection]);
 
-  const atlasTargetProject = atlasUploadProject || selectedProjectId || safeProjects[0]?.project_id || '';
+  const atlasTargetProject = atlasUploadProject || selectedProjectId || safeProjects.find((project) => project.project_id === 'rna-topology-map')?.project_id || safeProjects[0]?.project_id || '';
 
   const uploadFromAtlas = async () => {
     const filename = atlasUploadName.trim();
@@ -491,6 +491,21 @@ export function MemoryAtlasPage() {
                 </div>
               </section>
 
+              <section className="rounded-[28px] border border-cyan-400/20 bg-cyan-400/10 p-4 shadow-2xl shadow-black/20">
+                <div className="text-[10px] uppercase tracking-[0.24em] text-cyan-100/80">Topology anchor</div>
+                <div className="mt-2 text-lg font-semibold text-white">RNA Topology Map</div>
+                <p className="mt-2 text-sm leading-relaxed text-cyan-50/90">
+                  The canonical entry point for spaces, projects, files, sessions, topics, relations and infrastructure.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setSelection({ kind: 'project', id: 'rna-topology-map' })}
+                  className="mt-4 w-full rounded-full border border-cyan-300/30 bg-cyan-300/10 px-4 py-2 text-sm text-cyan-50 hover:bg-cyan-300/20"
+                >
+                  Open topology map
+                </button>
+              </section>
+
               <section className="rounded-[28px] border border-white/10 bg-slate-950/70 p-4 shadow-2xl shadow-black/20">
                 <div className="text-xs uppercase tracking-[0.24em] text-slate-500">Spaces</div>
                 <div className="mt-3 space-y-2">
@@ -515,7 +530,11 @@ export function MemoryAtlasPage() {
               <section className="rounded-[28px] border border-white/10 bg-slate-950/70 p-4 shadow-2xl shadow-black/20">
                 <div className="text-xs uppercase tracking-[0.24em] text-slate-500">Projects</div>
                 <div className="mt-3 space-y-2">
-                  {safeProjects.slice(0, 12).map((project) => (
+                  {[...safeProjects].sort((a, b) => {
+                    if (a.project_id === 'rna-topology-map') return -1;
+                    if (b.project_id === 'rna-topology-map') return 1;
+                    return (b.updated_at || '').localeCompare(a.updated_at || '');
+                  }).slice(0, 12).map((project) => (
                     <button
                       key={project.project_id}
                       type="button"
