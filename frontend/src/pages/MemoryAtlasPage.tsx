@@ -276,6 +276,7 @@ export function MemoryAtlasPage() {
   const [atlasUploadContent, setAtlasUploadContent] = useState('');
   const [atlasUploadProject, setAtlasUploadProject] = useState('');
   const [isDraggingUpload, setIsDraggingUpload] = useState(false);
+  const [expandedFileId, setExpandedFileId] = useState<string | null>(null);
   const selectedProjectId = selection?.kind === 'project' ? selection.id : projectId;
   const projectDetail = useProjectDetailData(selectedProjectId).data || null;
   const projectFiles = useProjectFilesData(selectedProjectId).data || [];
@@ -418,6 +419,9 @@ export function MemoryAtlasPage() {
                       : selection?.kind === 'relation'
                         ? selectedRelation?.relation_type
                         : 'Atlas';
+
+  const expandedFile =
+    expandedFileId ? safeProjectFiles.find((file) => file.id === expandedFileId) || selectedProjectFile : selectedProjectFile;
 
   return (
     <ConsoleShell title="Operations Console" subtitle="Memory Atlas" isHealthy={healthQuery.data?.status === 'healthy'}>
@@ -704,8 +708,8 @@ export function MemoryAtlasPage() {
                 </div>
 
                 <div className="mt-5 space-y-3">
-                  {selection?.kind === 'space' ? (
-                    <>
+                    {selection?.kind === 'space' ? (
+                      <>
                       <DetailRow label="Type" value="Space" />
                       <DetailRow label="Path" value={selectedSpace?.path} />
                       <DetailRow label="Name" value={selectedSpace?.name} />
@@ -725,12 +729,34 @@ export function MemoryAtlasPage() {
                       <DetailRow label="Type" value="Project file" />
                       <DetailRow label="File" value={selectedProjectFile?.filename} />
                       <DetailRow label="Summary" value={selectedProjectFile?.summary || selectedProjectFile?.content || 'n/a'} />
-                      <DetailRow label="Raw content" value={selectedProjectFile?.content || 'n/a'} />
                       <DetailRow label="Tags" value={(selectedProjectFile?.tags || []).join(' • ') || 'n/a'} />
                       <DetailRow label="Source agent" value={selectedProjectFile?.source_agent || 'n/a'} />
                       <DetailRow label="Source device" value={selectedProjectFile?.source_device || 'n/a'} />
                       <DetailRow label="Source runtime" value={selectedProjectFile?.source_runtime || 'n/a'} />
                       <DetailRow label="Source workspace" value={selectedProjectFile?.source_workspace || 'n/a'} />
+                      <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Document view</div>
+                            <div className="mt-1 text-sm text-slate-100">Open the file as a readable note</div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setExpandedFileId((current) => (current === selectedProjectFile?.id ? null : selectedProjectFile?.id || null))}
+                            className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs text-cyan-100 hover:bg-cyan-400/20"
+                          >
+                            {expandedFileId === selectedProjectFile?.id ? 'Collapse' : 'Open as document'}
+                          </button>
+                        </div>
+                        {expandedFile ? (
+                          <div className="mt-3 space-y-3 rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+                            <div className="text-xs uppercase tracking-[0.24em] text-slate-500">{expandedFile.filename}</div>
+                            <div className="whitespace-pre-wrap text-sm leading-relaxed text-slate-200">
+                              {expandedFile.content || expandedFile.summary || 'No raw content saved. Only the summary is available.'}
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
                     </>
                   ) : selection?.kind === 'collection' ? (
                     <>
