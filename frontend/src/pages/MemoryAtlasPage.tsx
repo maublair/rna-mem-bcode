@@ -277,6 +277,7 @@ export function MemoryAtlasPage() {
   const [atlasUploadProject, setAtlasUploadProject] = useState('');
   const [isDraggingUpload, setIsDraggingUpload] = useState(false);
   const [expandedFileId, setExpandedFileId] = useState<string | null>(null);
+  const [focusFileMode, setFocusFileMode] = useState(false);
   const selectedProjectId = selection?.kind === 'project' ? selection.id : projectId;
   const projectDetail = useProjectDetailData(selectedProjectId).data || null;
   const projectFiles = useProjectFilesData(selectedProjectId).data || [];
@@ -422,6 +423,22 @@ export function MemoryAtlasPage() {
 
   const expandedFile =
     expandedFileId ? safeProjectFiles.find((file) => file.id === expandedFileId) || selectedProjectFile : selectedProjectFile;
+
+  const copyExpandedFile = async () => {
+    if (!expandedFile) return;
+    const payload = [
+      `# ${expandedFile.filename}`,
+      '',
+      `Summary: ${expandedFile.summary || 'n/a'}`,
+      `Source agent: ${expandedFile.source_agent || 'n/a'}`,
+      `Source device: ${expandedFile.source_device || 'n/a'}`,
+      `Source runtime: ${expandedFile.source_runtime || 'n/a'}`,
+      `Source workspace: ${expandedFile.source_workspace || 'n/a'}`,
+      '',
+      expandedFile.content || expandedFile.summary || 'No raw content saved.',
+    ].join('\n');
+    await navigator.clipboard.writeText(payload);
+  };
 
   return (
     <ConsoleShell title="Operations Console" subtitle="Memory Atlas" isHealthy={healthQuery.data?.status === 'healthy'}>
@@ -734,26 +751,47 @@ export function MemoryAtlasPage() {
                       <DetailRow label="Source device" value={selectedProjectFile?.source_device || 'n/a'} />
                       <DetailRow label="Source runtime" value={selectedProjectFile?.source_runtime || 'n/a'} />
                       <DetailRow label="Source workspace" value={selectedProjectFile?.source_workspace || 'n/a'} />
-                      <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+                      <div className={`rounded-2xl border border-white/10 bg-slate-950/50 p-4 ${focusFileMode ? 'ring-1 ring-cyan-400/20' : ''}`}>
                         <div className="flex items-center justify-between gap-3">
                           <div>
                             <div className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Document view</div>
                             <div className="mt-1 text-sm text-slate-100">Open the file as a readable note</div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setExpandedFileId((current) => (current === selectedProjectFile?.id ? null : selectedProjectFile?.id || null))}
-                            className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs text-cyan-100 hover:bg-cyan-400/20"
-                          >
-                            {expandedFileId === selectedProjectFile?.id ? 'Collapse' : 'Open as document'}
-                          </button>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={copyExpandedFile}
+                              className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 hover:bg-white/10"
+                            >
+                              Copy
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFocusFileMode((current) => !current)}
+                              className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 hover:bg-white/10"
+                            >
+                              {focusFileMode ? 'Exit focus' : 'Focus mode'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setExpandedFileId((current) => (current === selectedProjectFile?.id ? null : selectedProjectFile?.id || null))}
+                              className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs text-cyan-100 hover:bg-cyan-400/20"
+                            >
+                              {expandedFileId === selectedProjectFile?.id ? 'Collapse' : 'Open as document'}
+                            </button>
+                          </div>
                         </div>
                         {expandedFile ? (
-                          <div className="mt-3 space-y-3 rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+                          <div className={`mt-3 space-y-3 rounded-2xl border border-white/10 bg-slate-950/70 p-4 ${focusFileMode ? 'min-h-[360px]' : ''}`}>
                             <div className="text-xs uppercase tracking-[0.24em] text-slate-500">{expandedFile.filename}</div>
                             <div className="whitespace-pre-wrap text-sm leading-relaxed text-slate-200">
                               {expandedFile.content || expandedFile.summary || 'No raw content saved. Only the summary is available.'}
                             </div>
+                            {focusFileMode ? (
+                              <div className="rounded-xl border border-cyan-400/15 bg-cyan-400/5 p-3 text-xs leading-relaxed text-slate-300">
+                                Focus mode keeps the file centered so you can read and copy it without leaving the atlas.
+                              </div>
+                            ) : null}
                           </div>
                         ) : null}
                       </div>
