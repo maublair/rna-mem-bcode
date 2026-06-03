@@ -294,7 +294,7 @@ export function AdminPage() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-semibold text-slate-50">Projects and files</h3>
-                  <p className="text-sm text-slate-400">Create a project, attach files, and read the summary before raw content.</p>
+                  <p className="text-sm text-slate-400">Create a project, attach files, and read the summary before raw content. Agents should upload here directly; GDrive is only a fallback for large blobs.</p>
                 </div>
                   <Chip>{safeProjects.length}</Chip>
               </div>
@@ -307,7 +307,10 @@ export function AdminPage() {
                   <button type="button" onClick={createProject} className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100 hover:bg-cyan-400/20">Create project</button>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
-                  <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Attach file</div>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Agent upload</div>
+                    <Chip>direct RNA</Chip>
+                  </div>
                   <label className="space-y-2">
                     <span className="text-xs uppercase tracking-[0.2em] text-slate-500">Project</span>
                     <select value={selectedProjectId} onChange={(e) => setProjectSelection(e.target.value)} className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100">
@@ -317,7 +320,7 @@ export function AdminPage() {
                   <input value={fileNameInput} onChange={(e) => setFileNameInput(e.target.value)} placeholder="filename" className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500" />
                   <input value={fileSummaryInput} onChange={(e) => setFileSummaryInput(e.target.value)} placeholder="summary (optional)" className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500" />
                   <textarea value={fileContentInput} onChange={(e) => setFileContentInput(e.target.value)} placeholder="content or excerpt" rows={5} className="w-full rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-100 placeholder:text-slate-500" />
-                  <button type="button" onClick={uploadProjectFile} className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-sm text-emerald-100 hover:bg-emerald-400/20">Attach file</button>
+                  <button type="button" onClick={uploadProjectFile} className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-sm text-emerald-100 hover:bg-emerald-400/20">Upload to RNA</button>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
                   <div className="flex items-center justify-between gap-3">
@@ -334,6 +337,9 @@ export function AdminPage() {
                       <Chip>{selectedProjectDetail?.file_count ?? safeProjectFiles.length} files</Chip>
                       {selectedProjectDetail?.project.owner_agent ? <Chip>{`owner:${selectedProjectDetail.project.owner_agent}`}</Chip> : null}
                       {selectedProjectDetail?.project.current_session_id ? <Chip>{`session:${selectedProjectDetail.project.current_session_id}`}</Chip> : null}
+                    </div>
+                    <div className="mt-3 rounded-xl border border-cyan-400/15 bg-cyan-400/5 p-3 text-xs leading-relaxed text-slate-300">
+                      Direct upload is the canonical path. If a file is too large or binary-heavy, store the blob elsewhere and keep only a pointer plus summary in RNA.
                     </div>
                   </div>
                   <div className="mt-4 space-y-3">
