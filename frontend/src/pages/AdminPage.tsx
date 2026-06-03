@@ -162,9 +162,9 @@ export function AdminPage() {
 
   return (
     <ConsoleShell title="Operations Console" subtitle="Admin" isHealthy={healthQuery.data?.status === 'healthy'}>
-      <div className="min-h-full bg-[radial-gradient(circle_at_top_right,_rgba(34,211,238,0.10),_transparent_24%),radial-gradient(circle_at_bottom_left,_rgba(99,102,241,0.10),_transparent_24%)]">
-        <div className="p-6">
-          <div className="mx-auto flex max-w-6xl flex-col gap-6">
+      <div className="min-h-full bg-[radial-gradient(circle_at_top_right,_rgba(34,211,238,0.10),_transparent_24%),radial-gradient(circle_at_bottom_left,_rgba(99,102,241,0.10),_transparent_24%),linear-gradient(180deg,#020617_0%,#0f172a_100%)]">
+        <div className="p-5 lg:p-6">
+          <div className="mx-auto flex max-w-[1600px] flex-col gap-6">
             <header className="rounded-[28px] border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/20 backdrop-blur space-y-2">
               <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[11px] uppercase tracking-[0.28em] text-cyan-200">
                 Governance layer
@@ -175,14 +175,14 @@ export function AdminPage() {
               </p>
             </header>
 
-            <section className="space-y-4">
+            <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
               <Metric label="Health" value={healthQuery.data?.status ?? 'unknown'} />
               <Metric label="Collections" value={safeCollections.length} />
               <Metric label="Operational facts" value={filteredFacts.length} />
               <Metric label="Trace entries" value={filteredTraces.length} />
             </section>
 
-            <section className="rounded-[24px] border border-white/10 bg-slate-950/70 p-5 shadow-2xl shadow-black/20">
+            <section className="rounded-[28px] border border-white/10 bg-slate-950/70 p-5 shadow-2xl shadow-black/20">
               <div className="flex flex-col gap-3">
                 <div>
                   <h3 className="text-lg font-semibold text-slate-50">Memory filters</h3>
@@ -200,17 +200,17 @@ export function AdminPage() {
                 ].map((field) => (
                   <label key={field.label} className="space-y-2">
                     <span className="text-xs uppercase tracking-[0.2em] text-slate-500">{field.label}</span>
-                    <input value={field.value} onChange={(e) => field.onChange(e.target.value)} placeholder={field.placeholder} className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500" />
-                  </label>
-                ))}
-              </div>
-            </section>
+                    <input value={field.value} onChange={(e) => field.onChange(e.target.value)} placeholder={field.placeholder} className="w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500" />
+                </label>
+              ))}
+            </div>
+          </section>
 
-            <section className="rounded-[24px] border border-white/10 bg-slate-950/70 p-5 shadow-2xl shadow-black/20">
+            <section className="rounded-[28px] border border-white/10 bg-slate-950/70 p-5 shadow-2xl shadow-black/20">
               <div className="flex items-center justify-between gap-3"><div><h3 className="text-lg font-semibold text-slate-50">Recent trace</h3><p className="text-sm text-slate-400">Command trail, status, result summary, and runtime context.</p></div><Chip>{filteredTraces.length}</Chip></div>
               <div className="mt-4 space-y-3">
                 {filteredTraces.map((trace) => (
-                  <article key={trace.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <article key={trace.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                     <div className="flex items-center justify-between gap-3"><div className="font-medium text-slate-100">{trace.agent_id}</div><div className="text-xs text-slate-500">{new Date(trace.created_at).toLocaleString()}</div></div>
                     <div className="mt-2 text-sm text-slate-300">{trace.command}</div>
                     <div className="mt-2 text-xs uppercase tracking-[0.2em] text-cyan-400/80">{trace.status}</div>
@@ -226,11 +226,11 @@ export function AdminPage() {
               </div>
             </section>
 
-            <section className="rounded-[24px] border border-white/10 bg-slate-950/70 p-5 shadow-2xl shadow-black/20">
+            <section className="rounded-[28px] border border-white/10 bg-slate-950/70 p-5 shadow-2xl shadow-black/20">
               <div className="flex items-center justify-between gap-3"><div><h3 className="text-lg font-semibold text-slate-50">Operational learnings</h3><p className="text-sm text-slate-400">Facts worth preserving and reusing across agents.</p></div><Chip>{filteredFacts.length}</Chip></div>
               <div className="mt-4 space-y-3">
                 {filteredFacts.map((fact) => (
-                  <article key={fact.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <article key={fact.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                     <div className="flex items-center justify-between gap-3"><div className="text-xs uppercase tracking-[0.2em] text-cyan-400/80">{fact.type}</div><div className="text-xs text-slate-500">{new Date(fact.created_at).toLocaleString()}</div></div>
                     <div className="mt-2 whitespace-pre-wrap text-sm text-slate-300">{fact.content}</div>
                     <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-500">
@@ -244,11 +244,11 @@ export function AdminPage() {
               </div>
             </section>
 
-            <section className="rounded-[24px] border border-white/10 bg-slate-950/70 p-5 shadow-2xl shadow-black/20">
+            <section className="rounded-[28px] border border-white/10 bg-slate-950/70 p-5 shadow-2xl shadow-black/20">
               <div className="flex items-center justify-between gap-3"><div><h3 className="text-lg font-semibold text-slate-50">Sessions</h3><p className="text-sm text-slate-400">What each agent is actively carrying.</p></div><Chip>{filteredSessions.length}</Chip></div>
               <div className="mt-4 space-y-3">
                 {filteredSessions.map((session) => (
-                  <article key={session.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <article key={session.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                     <div className="flex items-center justify-between gap-3"><div className="font-medium text-slate-100">{session.agent_id}</div><Chip>{session.status}</Chip></div>
                     <div className="mt-2 text-sm text-slate-300">{session.objective}</div>
                     {session.summary ? <div className="mt-2 text-xs text-slate-400">{session.summary}</div> : null}

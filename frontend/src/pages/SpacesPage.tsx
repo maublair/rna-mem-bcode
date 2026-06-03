@@ -128,35 +128,40 @@ export function SpacesPage() {
 
   return (
     <ConsoleShell title="Operations Console" subtitle="Spaces" isHealthy={healthQuery.data?.status === 'healthy'}>
-      <div className="p-6 space-y-6">
-        <header className="space-y-2">
-          <h2 className="text-2xl font-semibold text-slate-100">Memory Palace</h2>
-          <p className="text-sm text-slate-400 max-w-3xl">
+      <div className="min-h-full bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.10),_transparent_26%),radial-gradient(circle_at_bottom_right,_rgba(168,85,247,0.08),_transparent_22%),linear-gradient(180deg,#020617_0%,#0f172a_100%)]">
+        <div className="p-5 lg:p-6">
+          <div className="mx-auto flex max-w-[1600px] flex-col gap-6">
+        <header className="rounded-[28px] border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/20 backdrop-blur space-y-2">
+          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[11px] uppercase tracking-[0.28em] text-cyan-200">
+            Spaces / Collections
+          </div>
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-50 md:text-3xl">Memory Palace</h2>
+          <p className="text-sm text-slate-300 max-w-3xl">
             This is the real surface for spaces and collections. It reflects the Firebase-like structure described in RNA docs.
           </p>
         </header>
 
-        <section className="grid grid-cols-1 gap-4">
-          <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
             <div className="text-xs uppercase tracking-[0.2em] text-cyan-400/80">Spaces</div>
-            <div className="mt-2 text-2xl font-semibold">{spaces.length}</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-50">{spaces.length}</div>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
+          <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
             <div className="text-xs uppercase tracking-[0.2em] text-cyan-400/80">Collections</div>
-            <div className="mt-2 text-2xl font-semibold">{collections.length}</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-50">{collections.length}</div>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
+          <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
             <div className="text-xs uppercase tracking-[0.2em] text-cyan-400/80">Facts</div>
-            <div className="mt-2 text-2xl font-semibold">{facts.length}</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-50">{facts.length}</div>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
+          <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
             <div className="text-xs uppercase tracking-[0.2em] text-cyan-400/80">Health</div>
-            <div className="mt-2 text-2xl font-semibold">{healthQuery.data?.status ?? 'unknown'}</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-50">{healthQuery.data?.status ?? 'unknown'}</div>
           </div>
         </section>
 
-        <div className="space-y-6">
-          <aside className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 space-y-4">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[18rem_minmax(0,1fr)]">
+          <aside className="rounded-[28px] border border-white/10 bg-slate-950/70 p-4 space-y-4 shadow-2xl shadow-black/20">
             <div className="text-sm font-semibold text-slate-100">Spaces</div>
             <div className="space-y-2">
               {spaces.map((space: SpaceSummary) => (
@@ -166,10 +171,10 @@ export function SpacesPage() {
                     setSelectedSpace(space.id);
                     setSelectedCollection(null);
                   }}
-                  className={`w-full text-left rounded-lg border px-3 py-3 transition-colors ${
+                  className={`w-full text-left rounded-2xl border px-3 py-3 transition-colors ${
                     selectedSpace === space.id
                       ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200'
-                      : 'border-slate-800 bg-slate-950/40 text-slate-300 hover:border-slate-700'
+                      : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20 hover:bg-white/10'
                   }`}
                 >
                   <div className="font-medium">{space.name}</div>
@@ -180,7 +185,7 @@ export function SpacesPage() {
           </aside>
 
           <section className="space-y-6">
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
+            <div className="rounded-[28px] border border-white/10 bg-slate-950/70 p-5 shadow-2xl shadow-black/20">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-semibold text-slate-100">Create collection</h3>
@@ -193,21 +198,21 @@ export function SpacesPage() {
                   <span className="text-xs uppercase tracking-[0.2em] text-slate-500">Collection ID</span>
                   <input
                     {...collectionForm.register('id')}
-                    className="w-full rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2 text-slate-100"
+                    className="w-full rounded-lg border border-white/10 bg-slate-950/40 px-3 py-2 text-slate-100"
                   />
                 </label>
                 <label className="space-y-2">
                   <span className="text-xs uppercase tracking-[0.2em] text-slate-500">Name</span>
                   <input
                     {...collectionForm.register('name')}
-                    className="w-full rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2 text-slate-100"
+                    className="w-full rounded-lg border border-white/10 bg-slate-950/40 px-3 py-2 text-slate-100"
                   />
                 </label>
                 <label className="space-y-2">
                   <span className="text-xs uppercase tracking-[0.2em] text-slate-500">Visibility</span>
                   <select
                     {...collectionForm.register('visibility')}
-                    className="w-full rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2 text-slate-100"
+                    className="w-full rounded-lg border border-white/10 bg-slate-950/40 px-3 py-2 text-slate-100"
                   >
                     <option value="private">private</option>
                     <option value="shared">shared</option>
@@ -219,7 +224,7 @@ export function SpacesPage() {
                   <span className="text-xs uppercase tracking-[0.2em] text-slate-500">Owner type</span>
                   <input
                     {...collectionForm.register('owner_type')}
-                    className="w-full rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2 text-slate-100"
+                    className="w-full rounded-lg border border-white/10 bg-slate-950/40 px-3 py-2 text-slate-100"
                   />
                 </label>
                 <div className="md:col-span-2 flex items-center gap-3">
@@ -235,7 +240,7 @@ export function SpacesPage() {
               </form>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
+            <div className="rounded-[28px] border border-white/10 bg-slate-950/70 p-5 shadow-2xl shadow-black/20">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-semibold text-slate-100">Collections in {selectedSpace}</h3>
@@ -249,10 +254,10 @@ export function SpacesPage() {
                   <button
                     key={collection.id}
                     onClick={() => setSelectedCollection(collection.id)}
-                    className={`text-left rounded-xl border p-4 transition-colors ${
+                    className={`text-left rounded-2xl border p-4 transition-colors ${
                       selectedCollection === collection.id
                         ? 'border-cyan-500/40 bg-cyan-500/10'
-                        : 'border-slate-800 bg-slate-950/40 hover:border-slate-700'
+                        : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-3">
@@ -266,7 +271,7 @@ export function SpacesPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
+            <div className="rounded-[28px] border border-white/10 bg-slate-950/70 p-5 shadow-2xl shadow-black/20">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-semibold text-slate-100">Operational facts</h3>
@@ -277,7 +282,7 @@ export function SpacesPage() {
 
               <div className="mt-4 space-y-3">
                 {facts.map((fact: FactSummary) => (
-                  <article key={fact.id} className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+                  <article key={fact.id} className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div className="text-xs uppercase tracking-[0.2em] text-cyan-400/80">{fact.type}</div>
                       <div className="text-xs text-slate-500">{new Date(fact.created_at).toLocaleString()}</div>
@@ -294,7 +299,7 @@ export function SpacesPage() {
             </div>
 
             {selectedCollectionData && (
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
+              <div className="rounded-[28px] border border-white/10 bg-slate-950/70 p-5 shadow-2xl shadow-black/20">
                 <h3 className="text-lg font-semibold text-slate-100">Selected collection</h3>
                 <div className="mt-3 space-y-2 text-sm text-slate-400">
                   <div>ID: <span className="text-slate-200 font-mono">{selectedCollectionData.id}</span></div>
@@ -351,7 +356,7 @@ export function SpacesPage() {
                   )}
                   <div className="mt-4 space-y-3">
                     {docs.map((doc: DocumentSummary) => (
-                      <article key={doc.id} className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+                      <article key={doc.id} className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
                         <div className="flex items-center justify-between gap-3">
                           <div className="font-medium text-slate-100">{doc.title || doc.type}</div>
                           <div className="flex items-center gap-2">
@@ -436,6 +441,8 @@ export function SpacesPage() {
               </div>
             )}
           </section>
+        </div>
+          </div>
         </div>
       </div>
     </ConsoleShell>
