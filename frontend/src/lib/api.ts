@@ -117,6 +117,23 @@ export const api = {
       source_workspace?: string | null;
     }
   ) => request<ProjectFileSummary>(`/v1/projects/${projectId}/files`, { method: 'POST', body: JSON.stringify(body) }),
+  updateProjectFile: (
+    projectId: string,
+    fileId: string,
+    body: Partial<{
+      filename: string;
+      mime_type?: string | null;
+      size_bytes?: number | null;
+      content?: string | null;
+      summary?: string | null;
+      tags?: string[];
+      metadata?: Record<string, unknown>;
+      source_agent?: string | null;
+      source_device?: string | null;
+      source_runtime?: string | null;
+      source_workspace?: string | null;
+    }>
+  ) => request<ProjectFileSummary>(`/v1/projects/${projectId}/files/${fileId}`, { method: 'PATCH', body: JSON.stringify(body) }),
   createCollection: (body: {
     id: string;
     space_id?: string | null;

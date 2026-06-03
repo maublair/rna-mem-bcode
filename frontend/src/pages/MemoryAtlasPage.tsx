@@ -278,6 +278,7 @@ export function MemoryAtlasPage() {
   const [isDraggingUpload, setIsDraggingUpload] = useState(false);
   const [expandedFileId, setExpandedFileId] = useState<string | null>(null);
   const [focusFileMode, setFocusFileMode] = useState(false);
+  const [fileEditBuffer, setFileEditBuffer] = useState('');
   const selectedProjectId = selection?.kind === 'project' ? selection.id : projectId;
   const projectDetail = useProjectDetailData(selectedProjectId).data || null;
   const projectFiles = useProjectFilesData(selectedProjectId).data || [];
@@ -438,6 +439,17 @@ export function MemoryAtlasPage() {
       expandedFile.content || expandedFile.summary || 'No raw content saved.',
     ].join('\n');
     await navigator.clipboard.writeText(payload);
+  };
+
+  const saveExpandedFileNote = async () => {
+    if (!selectedProjectFile) return;
+    await api.updateProjectFile(selectedProjectFile.project_id, selectedProjectFile.id, {
+      summary: fileEditBuffer.trim() || selectedProjectFile.summary || undefined,
+      content: fileEditBuffer.trim() || selectedProjectFile.content || undefined,
+      source_agent: 'rna-atlas',
+      source_runtime: 'rna-frontend',
+      source_workspace: 'rna-atlas',
+    });
   };
 
   return (
@@ -787,9 +799,32 @@ export function MemoryAtlasPage() {
                             <div className="whitespace-pre-wrap text-sm leading-relaxed text-slate-200">
                               {expandedFile.content || expandedFile.summary || 'No raw content saved. Only the summary is available.'}
                             </div>
+                            <textarea
+                              value={fileEditBuffer}
+                              onChange={(event) => setFileEditBuffer(event.target.value)}
+                              placeholder="Add a note or overwrite the document summary here..."
+                              rows={focusFileMode ? 8 : 4}
+                              className="w-full rounded-2xl border border-white/10 bg-slate-950/80 p-4 text-sm text-slate-100 placeholder:text-slate-500"
+                            />
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setFileEditBuffer(expandedFile.content || expandedFile.summary || '')}
+                                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 hover:bg-white/10"
+                              >
+                                Load current
+                              </button>
+                              <button
+                                type="button"
+                                onClick={saveExpandedFileNote}
+                                className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-100 hover:bg-emerald-400/20"
+                              >
+                                Save note
+                              </button>
+                            </div>
                             {focusFileMode ? (
                               <div className="rounded-xl border border-cyan-400/15 bg-cyan-400/5 p-3 text-xs leading-relaxed text-slate-300">
-                                Focus mode keeps the file centered so you can read and copy it without leaving the atlas.
+                                Focus mode keeps the file centered so you can read, annotate and save without leaving the atlas.
                               </div>
                             ) : null}
                           </div>

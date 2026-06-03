@@ -831,6 +831,66 @@ export async function upsertProjectFile(input: ProjectFileInput) {
   return result.rows[0];
 }
 
+export async function updateProjectFile(fileId: string, input: Partial<ProjectFileInput>) {
+  await ensureMemorySchema();
+  const current = await postgres.query(
+    `SELECT id, project_id, filename, mime_type, size_bytes, content, summary, tags, metadata, source_agent, source_device, source_runtime, source_workspace
+     FROM rna_project_files
+     WHERE id = $1
+     LIMIT 1`,
+    [fileId]
+  );
+  if (!current.rows[0]) return null;
+  const existing = current.rows[0];
+  const merged: ProjectFileInput = {
+    project_id: existing.project_id,
+    filename: input.filename || existing.filename,
+    mime_type: input.mime_type !== undefined ? input.mime_type : existing.mime_type,
+    size_bytes: input.size_bytes !== undefined ? input.size_bytes : existing.size_bytes,
+    content: input.content !== undefined ? input.content : existing.content,
+    summary: input.summary !== undefined ? input.summary : existing.summary,
+    tags: input.tags || existing.tags || [],
+    metadata: { ...(existing.metadata || {}), ...(input.metadata || {}) },
+    source_agent: input.source_agent !== undefined ? input.source_agent : existing.source_agent,
+    source_device: input.source_device !== undefined ? input.source_device : existing.source_device,
+    source_runtime: input.source_runtime !== undefined ? input.source_runtime : existing.source_runtime,
+    source_workspace: input.source_workspace !== undefined ? input.source_workspace : existing.source_workspace,
+  };
+  const summary = deriveProjectFileSummary(merged);
+  const result = await postgres.query(
+    `UPDATE rna_project_files
+     SET filename = $2,
+         mime_type = $3,
+         size_bytes = $4,
+         content = $5,
+         summary = $6,
+         tags = $7,
+         metadata = $8,
+         source_agent = $9,
+         source_device = $10,
+         source_runtime = $11,
+         source_workspace = $12,
+         updated_at = now()
+     WHERE id = $1
+     RETURNING id, project_id, filename, mime_type, size_bytes, content, summary, tags, metadata, source_agent, source_device, source_runtime, source_workspace, created_at, updated_at`,
+    [
+      fileId,
+      merged.filename,
+      merged.mime_type || null,
+      merged.size_bytes ?? null,
+      merged.content || null,
+      summary,
+      merged.tags || [],
+      merged.metadata || {},
+      merged.source_agent || null,
+      merged.source_device || null,
+      merged.source_runtime || null,
+      merged.source_workspace || null,
+    ]
+  );
+  return result.rows[0];
+}
+
 export async function queryFacts(filters: FactFilters) {
   await ensureMemorySchema();
   const clauses = ['1 = 1'];

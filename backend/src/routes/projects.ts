@@ -1,6 +1,6 @@
 import { Router, type Response } from 'express';
 import { deviceAuth, type AuthedRequest } from '../middleware/deviceAuth.js';
-import { listProjectFiles, listProjects, upsertProject, upsertProjectFile } from '../services/memoryService.js';
+import { listProjectFiles, listProjects, updateProjectFile, upsertProject, upsertProjectFile } from '../services/memoryService.js';
 
 const router = Router();
 router.use(deviceAuth);
@@ -73,6 +73,24 @@ router.post('/:projectId/files', async (req: AuthedRequest, res: Response) => {
     source_workspace: req.body?.source_workspace ? String(req.body.source_workspace) : 'rna-console',
   });
   res.status(201).json(file);
+});
+
+router.patch('/:projectId/files/:fileId', async (req: AuthedRequest, res: Response) => {
+  const file = await updateProjectFile(req.params.fileId, {
+    filename: req.body?.filename ? String(req.body.filename) : undefined,
+    mime_type: req.body?.mime_type !== undefined ? String(req.body.mime_type) : undefined,
+    size_bytes: req.body?.size_bytes !== undefined ? Number(req.body.size_bytes) : undefined,
+    content: req.body?.content !== undefined ? String(req.body.content) : undefined,
+    summary: req.body?.summary !== undefined ? String(req.body.summary) : undefined,
+    tags: Array.isArray(req.body?.tags) ? req.body.tags.map(String) : undefined,
+    metadata: req.body?.metadata || undefined,
+    source_agent: req.body?.source_agent !== undefined ? String(req.body.source_agent) : undefined,
+    source_device: req.body?.source_device !== undefined ? String(req.body.source_device) : undefined,
+    source_runtime: req.body?.source_runtime !== undefined ? String(req.body.source_runtime) : undefined,
+    source_workspace: req.body?.source_workspace !== undefined ? String(req.body.source_workspace) : undefined,
+  });
+  if (!file) return res.status(404).json({ error: 'file_not_found' });
+  res.json(file);
 });
 
 export default router;
