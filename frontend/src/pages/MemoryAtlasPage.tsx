@@ -4,6 +4,7 @@ import '@xyflow/react/dist/style.css';
 import dagre from 'dagre';
 import { ConsoleShell } from '../components/layout/ConsoleShell';
 import { useHealth } from '../hooks/useInfrastructure';
+import { api } from '../lib/api';
 import {
   useCollectionsData,
   useFactsData,
@@ -270,6 +271,10 @@ export function MemoryAtlasPage() {
   const safeTraces = Array.isArray(traces) ? traces : [];
 
   const [selection, setSelection] = useState<AtlasSelection | null>(null);
+  const [atlasUploadName, setAtlasUploadName] = useState('');
+  const [atlasUploadSummary, setAtlasUploadSummary] = useState('');
+  const [atlasUploadContent, setAtlasUploadContent] = useState('');
+  const [atlasUploadProject, setAtlasUploadProject] = useState('');
   const selectedProjectId = selection?.kind === 'project' ? selection.id : projectId;
   const projectDetail = useProjectDetailData(selectedProjectId).data || null;
   const projectFiles = useProjectFilesData(selectedProjectId).data || [];
@@ -328,6 +333,24 @@ export function MemoryAtlasPage() {
     }
     return safeProjectFiles;
   }, [safeProjectFiles, selection]);
+
+  const atlasTargetProject = atlasUploadProject || selectedProjectId || safeProjects[0]?.project_id || '';
+
+  const uploadFromAtlas = async () => {
+    const filename = atlasUploadName.trim();
+    if (!filename || !atlasTargetProject) return;
+    await api.createProjectFile(atlasTargetProject, {
+      filename,
+      summary: atlasUploadSummary.trim() || undefined,
+      content: atlasUploadContent.trim() || undefined,
+      source_agent: 'rna-atlas',
+      source_runtime: 'rna-frontend',
+      source_workspace: 'rna-atlas',
+    });
+    setAtlasUploadName('');
+    setAtlasUploadSummary('');
+    setAtlasUploadContent('');
+  };
 
   const focusedNodes = useMemo(() => {
     if (!selection) return layout.nodes;
@@ -429,6 +452,57 @@ export function MemoryAtlasPage() {
                       <div className="mt-1 text-xs text-slate-500">{project.project_id}</div>
                     </button>
                   ))}
+                </div>
+              </section>
+
+              <section className="rounded-[28px] border border-white/10 bg-slate-950/70 p-4 shadow-2xl shadow-black/20">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-xs uppercase tracking-[0.24em] text-slate-500">Upload from atlas</div>
+                  <Chip>direct RNA</Chip>
+                </div>
+                <div className="mt-3 space-y-3">
+                  <label className="space-y-2">
+                    <span className="text-xs uppercase tracking-[0.2em] text-slate-500">Project</span>
+                    <select
+                      value={atlasUploadProject}
+                      onChange={(e) => setAtlasUploadProject(e.target.value)}
+                      className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100"
+                    >
+                      <option value="">Current project</option>
+                      {safeProjects.map((project) => (
+                        <option key={project.project_id} value={project.project_id}>{project.title}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <input
+                    value={atlasUploadName}
+                    onChange={(e) => setAtlasUploadName(e.target.value)}
+                    placeholder="filename"
+                    className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500"
+                  />
+                  <input
+                    value={atlasUploadSummary}
+                    onChange={(e) => setAtlasUploadSummary(e.target.value)}
+                    placeholder="summary"
+                    className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500"
+                  />
+                  <textarea
+                    value={atlasUploadContent}
+                    onChange={(e) => setAtlasUploadContent(e.target.value)}
+                    placeholder="content or excerpt"
+                    rows={4}
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-100 placeholder:text-slate-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={uploadFromAtlas}
+                    className="w-full rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-sm text-emerald-100 hover:bg-emerald-400/20"
+                  >
+                    Upload to RNA
+                  </button>
+                </div>
+                <div className="mt-3 rounded-xl border border-cyan-400/15 bg-cyan-400/5 p-3 text-xs leading-relaxed text-slate-300">
+                  This is the canonical path. Use GDrive only when the payload is too large or binary-heavy; keep the summary and provenance in RNA.
                 </div>
               </section>
 
