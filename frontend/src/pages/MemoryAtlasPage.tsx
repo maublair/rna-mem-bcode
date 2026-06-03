@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Background, Controls, MiniMap, ReactFlow, type Edge, type Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import dagre from 'dagre';
@@ -69,6 +69,10 @@ function AtlasCard({ title, value, tone }: { title: string; value: string | numb
       <div className="mt-2 text-2xl font-semibold text-white">{value}</div>
     </div>
   );
+}
+
+function Chip({ children }: { children: ReactNode }) {
+  return <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-slate-400">{children}</span>;
 }
 
 function MemoryNode({ data }: any) {
@@ -318,6 +322,12 @@ export function MemoryAtlasPage() {
   const selectedHandoff = selection?.kind === 'handoff' ? safeHandoffs.find((handoff) => handoff.id === selection.id) || null : null;
   const selectedTrace = selection?.kind === 'trace' ? safeTraces.find((trace) => trace.id === selection.id) || null : null;
   const selectedRelation = selection?.kind === 'relation' ? safeRelations.find((relation) => relation.id === selection.id) || null : null;
+  const activeProjectFiles = useMemo(() => {
+    if (selection?.kind === 'project') {
+      return safeProjectFiles.filter((file) => file.project_id === selection.id);
+    }
+    return safeProjectFiles;
+  }, [safeProjectFiles, selection]);
 
   const focusedNodes = useMemo(() => {
     if (!selection) return layout.nodes;
@@ -417,6 +427,30 @@ export function MemoryAtlasPage() {
                     >
                       <div className="text-sm font-medium">{project.title}</div>
                       <div className="mt-1 text-xs text-slate-500">{project.project_id}</div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-[28px] border border-white/10 bg-slate-950/70 p-4 shadow-2xl shadow-black/20">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-xs uppercase tracking-[0.24em] text-slate-500">Files</div>
+                  <Chip>{activeProjectFiles.length}</Chip>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {activeProjectFiles.slice(0, 8).map((file) => (
+                    <button
+                      key={file.id}
+                      type="button"
+                      onClick={() => setSelection({ kind: 'file', id: file.id })}
+                      className={`w-full rounded-2xl border px-3 py-3 text-left transition-colors ${
+                        selection?.kind === 'file' && selection.id === file.id
+                          ? 'border-violet-400/40 bg-violet-500/10 text-violet-100'
+                          : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20 hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="text-sm font-medium">{file.filename}</div>
+                      <div className="mt-1 text-xs text-slate-500">{file.summary || file.mime_type || 'project file'}</div>
                     </button>
                   ))}
                 </div>
@@ -552,6 +586,7 @@ export function MemoryAtlasPage() {
                       <DetailRow label="Type" value="Project file" />
                       <DetailRow label="File" value={selectedProjectFile?.filename} />
                       <DetailRow label="Summary" value={selectedProjectFile?.summary || selectedProjectFile?.content || 'n/a'} />
+                      <DetailRow label="Raw content" value={selectedProjectFile?.content || 'n/a'} />
                       <DetailRow label="Tags" value={(selectedProjectFile?.tags || []).join(' • ') || 'n/a'} />
                       <DetailRow label="Source agent" value={selectedProjectFile?.source_agent || 'n/a'} />
                       <DetailRow label="Source device" value={selectedProjectFile?.source_device || 'n/a'} />
