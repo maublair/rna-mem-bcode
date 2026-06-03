@@ -452,6 +452,18 @@ export function MemoryAtlasPage() {
     });
   };
 
+  const promoteExpandedFileSummary = async () => {
+    if (!selectedProjectFile) return;
+    const nextSummary = fileEditBuffer.trim();
+    if (!nextSummary) return;
+    await api.updateProjectFile(selectedProjectFile.project_id, selectedProjectFile.id, {
+      summary: nextSummary,
+      source_agent: 'rna-atlas',
+      source_runtime: 'rna-frontend',
+      source_workspace: 'rna-atlas',
+    });
+  };
+
   return (
     <ConsoleShell title="Operations Console" subtitle="Memory Atlas" isHealthy={healthQuery.data?.status === 'healthy'}>
       <div className="min-h-full bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.14),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(168,85,247,0.10),_transparent_28%),linear-gradient(180deg,#020617_0%,#0f172a_100%)]">
@@ -820,6 +832,13 @@ export function MemoryAtlasPage() {
                                 className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-100 hover:bg-emerald-400/20"
                               >
                                 Save note
+                              </button>
+                              <button
+                                type="button"
+                                onClick={promoteExpandedFileSummary}
+                                className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs text-cyan-100 hover:bg-cyan-400/20"
+                              >
+                                Promote to summary
                               </button>
                             </div>
                             {focusFileMode ? (
