@@ -275,6 +275,7 @@ export function MemoryAtlasPage() {
   const [atlasUploadSummary, setAtlasUploadSummary] = useState('');
   const [atlasUploadContent, setAtlasUploadContent] = useState('');
   const [atlasUploadProject, setAtlasUploadProject] = useState('');
+  const [isDraggingUpload, setIsDraggingUpload] = useState(false);
   const selectedProjectId = selection?.kind === 'project' ? selection.id : projectId;
   const projectDetail = useProjectDetailData(selectedProjectId).data || null;
   const projectFiles = useProjectFilesData(selectedProjectId).data || [];
@@ -350,6 +351,38 @@ export function MemoryAtlasPage() {
     setAtlasUploadName('');
     setAtlasUploadSummary('');
     setAtlasUploadContent('');
+  };
+
+  const handleFileUpload = async (files: FileList | File[]) => {
+    const file = files[0];
+    if (!file) return;
+    const filename = atlasUploadName.trim() || file.name;
+    const summary = atlasUploadSummary.trim() || `${file.type || 'file'} · ${Math.round(file.size / 1024)} KB`;
+    let content = atlasUploadContent.trim();
+    try {
+      if (!content && file.size <= 500_000 && file.type.startsWith('text/')) {
+        content = await file.text();
+      }
+    } catch {
+      content = '';
+    }
+    setAtlasUploadName(filename);
+    setAtlasUploadSummary(summary);
+    setAtlasUploadContent(content);
+    await api.createProjectFile(atlasTargetProject, {
+      filename,
+      summary,
+      content: content || undefined,
+      mime_type: file.type || undefined,
+      size_bytes: file.size,
+      source_agent: 'rna-atlas',
+      source_runtime: 'rna-frontend',
+      source_workspace: 'rna-atlas',
+      metadata: {
+        upload_mode: 'drag-drop',
+        original_name: file.name,
+      },
+    });
   };
 
   const focusedNodes = useMemo(() => {
@@ -460,7 +493,25 @@ export function MemoryAtlasPage() {
                   <div className="text-xs uppercase tracking-[0.24em] text-slate-500">Upload from atlas</div>
                   <Chip>direct RNA</Chip>
                 </div>
-                <div className="mt-3 space-y-3">
+                <div
+                  className={`mt-3 space-y-3 rounded-3xl border border-dashed p-4 transition-colors ${isDraggingUpload ? 'border-cyan-400/60 bg-cyan-400/10' : 'border-white/10 bg-white/5'}`}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setIsDraggingUpload(true);
+                  }}
+                  onDragLeave={() => setIsDraggingUpload(false)}
+                  onDrop={async (event) => {
+                    event.preventDefault();
+                    setIsDraggingUpload(false);
+                    const dropped = event.dataTransfer.files;
+                    if (dropped.length > 0) {
+                      await handleFileUpload(dropped);
+                    }
+                  }}
+                >
+                  <div className="text-sm text-slate-300">
+                    Drop a file here or fill the fields below. Text files upload directly. Large binaries keep metadata and summary in RNA.
+                  </div>
                   <label className="space-y-2">
                     <span className="text-xs uppercase tracking-[0.2em] text-slate-500">Project</span>
                     <select
@@ -500,6 +551,20 @@ export function MemoryAtlasPage() {
                   >
                     Upload to RNA
                   </button>
+                  <label className="block">
+                    <span className="text-xs uppercase tracking-[0.2em] text-slate-500">Or choose file</span>
+                    <input
+                      type="file"
+                      className="mt-2 block w-full text-sm text-slate-300 file:mr-4 file:rounded-full file:border-0 file:bg-cyan-500 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-cyan-400"
+                      onChange={async (event) => {
+                        const files = event.target.files;
+                        if (files && files.length > 0) {
+                          await handleFileUpload(files);
+                          event.target.value = '';
+                        }
+                      }}
+                    />
+                  </label>
                 </div>
                 <div className="mt-3 rounded-xl border border-cyan-400/15 bg-cyan-400/5 p-3 text-xs leading-relaxed text-slate-300">
                   This is the canonical path. Use GDrive only when the payload is too large or binary-heavy; keep the summary and provenance in RNA.
